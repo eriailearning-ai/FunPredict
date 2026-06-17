@@ -1,0 +1,192 @@
+// PostgreSQL version of the schema — used on Vercel/staging/production.
+// Local development uses prisma/schema.prisma (SQLite).
+//
+// The build:staging script copies this file over schema.prisma before building.
+// All models are identical — only the datasource block differs.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// ─── Users & Auth ──────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  username      String?   @unique
+  nickname      String    @default("")
+  league        String    @default("")
+  leagueId      Int?
+  cheeringFrom  String    @default("")
+  password      String
+  role          String    @default("player")
+  status        String    @default("pending")
+  verifyToken   String?
+  verifyExpiry  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  predictions   Prediction[]
+  sessions      Session[]
+  leagueRel     League?       @relation(fields: [leagueId], references: [id])
+  bonusAnswers  BonusAnswer[]
+  pollVotes     PollVote[]
+  auditLogs     AuditLog[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Leagues ───────────────────────────────────────────────
+
+model League {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  slug      String   @unique
+  color     String   @default("#1e3a5f")
+  createdAt DateTime @default(now())
+  users     User[]
+}
+
+// ─── Tournament ────────────────────────────────────────────
+
+model Team {
+  id        Int    @id @default(autoincrement())
+  name      String
+  code      String @unique
+  flagCode  String @default("")
+  group     String
+  flag      String @default("")
+
+  homeMatches Match[] @relation("HomeTeam")
+  awayMatches Match[] @relation("AwayTeam")
+}
+
+model Match {
+  id          Int       @id @default(autoincrement())
+  homeTeamId  Int
+  awayTeamId  Int
+  group       String
+  stage       String    @default("group")
+  matchDate   DateTime
+  venue       String    @default("")
+  homeScore   Int?
+  awayScore   Int?
+  status      String    @default("upcoming")
+  locked      Boolean   @default(false)
+  externalId  String?   @unique
+
+  homeTeam    Team      @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam    Team      @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  predictions Prediction[]
+  polls       Poll[]
+}
+
+model Prediction {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  matchId     Int
+  homeScore   Int
+  awayScore   Int
+  joker       Boolean  @default(false)
+  points      Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+}
+
+// ─── Bonus Questions ───────────────────────────────────────
+
+model BonusQuestion {
+  id            Int      @id @default(autoincrement())
+  question      String
+  type          String   @default("single")
+  stage         String   @default("group")
+  options       String   @default("[]")
+  correctAnswer String?  @default("")
+  points        Int      @default(5)
+  status        String   @default("open")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  answers       BonusAnswer[]
+}
+
+model BonusAnswer {
+  id         Int      @id @default(autoincrement())
+  userId     String
+  questionId Int
+  answer     String
+  points     Int?
+  createdAt  DateTime @default(now())
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question BonusQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+}
+
+// ─── Audience Polls ────────────────────────────────────────
+
+model Poll {
+  id        Int      @id @default(autoincrement())
+  matchId   Int?
+  question  String
+  options   String   @default("[]")
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+
+  match     Match?     @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  votes     PollVote[]
+}
+
+model PollVote {
+  id        Int      @id @default(autoincrement())
+  pollId    Int
+  userId    String
+  option    String
+  createdAt DateTime @default(now())
+
+  poll      Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
+}
+
+// ─── Audit Log ─────────────────────────────────────────────
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  action    String
+  details   String   @default("")
+  ip        String   @default("")
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Site Settings ─────────────────────────────────────────
+
+model Setting {
+  key   String @id
+  value String
+}

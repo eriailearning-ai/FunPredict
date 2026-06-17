@@ -6,3 +6,5 @@ node_modules/
 _prisma_prebuilt/
 
 .next/
+
+.env

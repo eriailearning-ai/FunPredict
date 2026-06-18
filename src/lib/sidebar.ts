@@ -30,11 +30,14 @@ export type SidebarStanding = {
   gd: string
 }
 
+export type TopScorer = { name: string; team: string; goals: number; assists: number }
+
 export type SidebarData = {
   topPerformers: SidebarPerformer[]
   nextMatch: SidebarMatch | null
   comingUp: SidebarMatch | null
   groupAStandings: SidebarStanding[]
+  topScorers: TopScorer[]
 }
 
 function isoFlag(code: string): string {
@@ -56,14 +59,17 @@ export async function getSidebarData(opts?: {
 }): Promise<SidebarData> {
   const { userLeague = '', isAdmin = false } = opts ?? {}
 
-  const [allUsers, upcoming, groupATeams, groupAMatches] = await Promise.all([
+  const [allUsers, upcoming, groupATeams, groupAMatches, scorerSetting] = await Promise.all([
     prisma.user.findMany({
       where: { status: 'approved' },
       include: { predictions: { select: { points: true } } },
     }).catch(() => []),
 
     prisma.match.findMany({
-      where: { status: { in: ['upcoming', 'live'] } },
+      where: {
+        status: { in: ['upcoming', 'live'] },
+        matchDate: { gte: new Date() },   // never show past matches
+      },
       orderBy: { matchDate: 'asc' },
       take: 2,
       include: { homeTeam: true, awayTeam: true },
@@ -75,6 +81,8 @@ export async function getSidebarData(opts?: {
       where: { group: 'A', status: 'finished' },
       include: { homeTeam: true, awayTeam: true },
     }).catch(() => []),
+
+    prisma.setting.findUnique({ where: { key: 'top_scorers' } }).catch(() => null),
   ])
 
   const fullBoard: SidebarPerformer[] = allUsers
@@ -153,10 +161,13 @@ export async function getSidebarData(opts?: {
     groupAStandings = GROUP_A_FALLBACK
   }
 
+  const topScorers: TopScorer[] = scorerSetting ? JSON.parse(scorerSetting.value) : []
+
   return {
     topPerformers,
     nextMatch: upcoming[0] ? toSidebarMatch(upcoming[0]) : null,
     comingUp: upcoming[1] ? toSidebarMatch(upcoming[1]) : null,
     groupAStandings,
+    topScorers,
   }
 }

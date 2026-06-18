@@ -4,8 +4,10 @@ import { useState } from 'react'
 export default function AdminSyncPage() {
   const [status, setStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
   const [result, setResult] = useState<any>(null)
-  const [pollStatus, setPollStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
-  const [pollResult, setPollResult] = useState<any>(null)
+  const [pollStatus, setPollStatus]     = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
+  const [pollResult, setPollResult]     = useState<any>(null)
+  const [scorerStatus, setScorerStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
+  const [scorerResult, setScorerResult] = useState<any>(null)
 
   async function sync() {
     setStatus('syncing')
@@ -106,6 +108,35 @@ export default function AdminSyncPage() {
               ? <p className="text-red-700"><strong>Error:</strong> {pollResult.error}</p>
               : <p className="text-green-800">✅ {pollResult.count} poll{pollResult.count !== 1 ? 's' : ''} ready for next 3 matches.</p>
             }
+          </div>
+        )}
+      </div>
+
+      {/* Scorers sync */}
+      <div className="bg-white rounded-xl shadow-sm p-5">
+        <h2 className="text-sm font-bold text-gray-800 mb-3">Sync Top Goalscorers</h2>
+        <p className="text-sm text-gray-500 mb-4">Fetches the current top goalscorers from football-data.org and displays them in the sidebar.</p>
+        <button
+          onClick={async () => {
+            setScorerStatus('syncing'); setScorerResult(null)
+            try {
+              const res = await fetch('/api/sync-scorers', { method: 'POST' })
+              const data = await res.json()
+              setScorerResult(data)
+              setScorerStatus(data.ok ? 'done' : 'error')
+            } catch (e: any) { setScorerResult({ error: e.message }); setScorerStatus('error') }
+          }}
+          disabled={scorerStatus === 'syncing'}
+          className="px-6 py-2.5 rounded-lg text-white font-semibold text-sm disabled:opacity-50"
+          style={{ background: scorerStatus === 'done' ? '#166534' : '#1e3a5f' }}
+        >
+          {scorerStatus === 'syncing' ? '🔄 Syncing…' : scorerStatus === 'done' ? '✅ Scorers Synced' : '⚽ Sync Top Goalscorers'}
+        </button>
+        {scorerResult && (
+          <div className={`mt-4 p-4 rounded-xl text-sm ${scorerResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            {scorerResult.error
+              ? <p className="text-red-700"><strong>Error:</strong> {scorerResult.error}</p>
+              : <p className="text-green-800">✅ {scorerResult.count} top scorers cached for sidebar.</p>}
           </div>
         )}
       </div>

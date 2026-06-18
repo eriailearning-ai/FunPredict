@@ -13,6 +13,7 @@ export default function AdminBonusPage() {
   const [form, setForm] = useState({ question: '', type: 'single', stage: 'group', options: DEFAULT_OPTIONS.join('\n'), points: 5, status: 'open' })
   const [editing, setEditing] = useState<Q | null>(null)
   const [saving, setSaving] = useState(false)
+  const [seeding, setSeeding] = useState(false)
   const [answerInput, setAnswerInput] = useState<Record<number, string>>({})
   const [msg, setMsg] = useState('')
 
@@ -20,6 +21,16 @@ export default function AdminBonusPage() {
     const res = await fetch('/api/admin/bonus')
     setQuestions(await res.json())
     setLoading(false)
+  }
+
+  async function seedBonus() {
+    setSeeding(true)
+    const res = await fetch('/api/admin/seed-bonus', { method: 'POST' })
+    const data = await res.json()
+    setMsg(`Seeded ${data.created} question${data.created !== 1 ? 's' : ''} (${data.skipped} already existed)`)
+    setTimeout(() => setMsg(''), 4000)
+    setSeeding(false)
+    load()
   }
 
   async function save() {
@@ -65,8 +76,20 @@ export default function AdminBonusPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-gray-900">Bonus Questions</h1>
-      <p className="text-sm text-gray-500">Add extra-fun questions. Players answer on the prediction form. When you set the correct answer, points are automatically awarded.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Bonus Questions</h1>
+          <p className="text-sm text-gray-500 mt-1">Players answer on the prediction form. Set the correct answer to auto-award points.</p>
+        </div>
+        <button
+          onClick={seedBonus}
+          disabled={seeding}
+          className="flex-shrink-0 px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50"
+          style={{ background: '#8b1c2c' }}
+        >
+          {seeding ? '⏳ Seeding…' : '⚽ Seed 6 Official Questions'}
+        </button>
+      </div>
 
       {msg && <div className="px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">{msg}</div>}
 

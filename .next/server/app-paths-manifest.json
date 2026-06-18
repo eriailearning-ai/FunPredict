@@ -1,10 +1,8 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/page": "app/page.js",
-  "/tournament/page": "app/tournament/page.js",
-  "/schedule/page": "app/schedule/page.js",
-  "/tournament/groups/page": "app/tournament/groups/page.js",
-  "/tournament/teams/page": "app/tournament/teams/page.js",
+  "/predictions/page": "app/predictions/page.js",
   "/auth/login/page": "app/auth/login/page.js",
-  "/tournament/venues/page": "app/tournament/venues/page.js"
+  "/api/sync-scores/route": "app/api/sync-scores/route.js",
+  "/api/scores/me/route": "app/api/scores/me/route.js",
+  "/admin/sync/page": "app/admin/sync/page.js"
 }

@@ -101,6 +101,28 @@ async function syncMatchResults() {
     }
   }
 
+  // Also sync top scorers in the background
+  try {
+    const scorersRes = await fetch(`${BASE_URL}/competitions/${WC2026_ID}/scorers?limit=10`, {
+      headers: { 'X-Auth-Token': API_KEY },
+      next: { revalidate: 0 },
+    })
+    if (scorersRes.ok) {
+      const sd = await scorersRes.json()
+      const scorers = (sd.scorers ?? []).slice(0, 10).map((s: any) => ({
+        name:    s.player?.name ?? 'Unknown',
+        team:    s.team?.shortName ?? s.team?.name ?? '',
+        goals:   s.goals ?? 0,
+        assists: s.assists ?? 0,
+      }))
+      await prisma.setting.upsert({
+        where:  { key: 'top_scorers' },
+        create: { key: 'top_scorers', value: JSON.stringify(scorers) },
+        update: { value: JSON.stringify(scorers) },
+      })
+    }
+  } catch {}
+
   return { ok: true, updated, scored, total: liveMatches.length }
 }
 

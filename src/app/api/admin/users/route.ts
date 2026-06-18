@@ -63,11 +63,12 @@ export async function PATCH(req: NextRequest) {
   /* ── standard actions ───────────────────────────────────── */
   let data: Record<string, unknown> = {}
   switch (action) {
-    case 'approve':    data = { status: 'approved' };             break
-    case 'deny':       data = { status: 'denied' };               break
-    case 'make_admin': data = { role: 'admin' };                  break
-    case 'make_player':data = { role: 'player' };                 break
-    case 'set_league': data = { league: body.league ?? '' };      break
+    case 'approve':         data = { status: 'approved' };             break
+    case 'deny':            data = { status: 'denied' };               break
+    case 'make_admin':      data = { role: 'admin' };                  break
+    case 'make_player':     data = { role: 'player' };                 break
+    case 'make_superplayer':data = { role: 'superplayer' };            break
+    case 'set_league':      data = { league: body.league ?? '' };      break
     default:
       return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   }

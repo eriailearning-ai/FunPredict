@@ -10,6 +10,8 @@ import Link from 'next/link'
 
 export const revalidate = 3600
 
+const GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L']
+
 export default async function TeamsPage() {
   const [sidebarData, session, teams] = await Promise.all([
     getSidebarData(),
@@ -18,6 +20,12 @@ export default async function TeamsPage() {
   ])
 
   function isoFlag(code: string) { return CODE3_TO_ISO2[code.toUpperCase()] ?? code.toLowerCase().slice(0, 2) }
+
+  const byGroup: Record<string, any[]> = {}
+  for (const t of teams) {
+    if (!byGroup[t.group]) byGroup[t.group] = []
+    byGroup[t.group].push(t)
+  }
 
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>
@@ -34,26 +42,40 @@ export default async function TeamsPage() {
 
         <div className="flex flex-col lg:flex-row gap-6">
           <main className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Teams</h1>
-            <p className="text-sm text-gray-500 mb-5">All 48 nations at FIFA World Cup 2026.</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">Teams</h1>
+            <p className="text-sm text-gray-500 mb-5">48 nations · 3 host countries · 1 champion.</p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {teams.map(t => (
-                <div key={t.id} className="bg-white rounded-xl shadow-sm p-4 flex flex-col items-center gap-2 hover:shadow-md transition-shadow">
-                  <FlagImg iso2={isoFlag(t.code)} name={t.name} size="lg" />
-                  <p className="text-xs font-semibold text-gray-800 text-center">{t.name}</p>
-                  <span className="text-xs px-2 py-0.5 rounded-full text-white" style={{ background: '#1e3a5f' }}>
-                    Group {t.group}
-                  </span>
-                </div>
-              ))}
-              {teams.length === 0 && (
-                <div className="col-span-4 text-center py-12 text-gray-400">
-                  <p>Teams not yet loaded.</p>
-                  <p className="text-xs mt-1">Import via the admin panel.</p>
-                </div>
-              )}
-            </div>
+            {teams.length === 0 ? (
+              <div className="bg-white rounded-xl p-8 text-center text-gray-400">
+                <p>Teams not yet loaded.</p>
+                <p className="text-xs mt-1">Import via the admin panel.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {GROUPS.map(g => {
+                  const groupTeams = byGroup[g] ?? []
+                  if (groupTeams.length === 0) return null
+                  return (
+                    <div key={g}>
+                      <h2 className="text-sm font-bold text-white px-3 py-1.5 rounded-lg inline-block mb-3" style={{ background: '#1e3a5f' }}>
+                        ★ Group {g} ★
+                      </h2>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {groupTeams.map((t: any) => (
+                          <div key={t.id} className="bg-white rounded-xl shadow-sm p-4 flex flex-col items-center gap-3 hover:shadow-md transition-shadow border border-gray-100">
+                            <FlagImg iso2={isoFlag(t.code)} name={t.name} size="lg" />
+                            <div className="text-center">
+                              <p className="text-xs font-bold text-gray-800">{t.name}</p>
+                              <p className="text-[10px] text-gray-400 mt-0.5">{t.code}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </main>
 
           <Sidebar {...sidebarData} isLoggedIn={!!session} />

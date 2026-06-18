@@ -13,9 +13,11 @@ const LEAGUES = ['Aila Attackers', 'Sukuti Strikers', 'Gorkhali Gooners']
 export default async function LeaderboardPage() {
   const session = await getSession().catch(() => null)
 
-  const isAdmin    = session?.role === 'admin'
-  const isPlayer   = !!session && !isAdmin
-  const userLeague = (session as any)?.league ?? ''
+  const isAdmin       = session?.role === 'admin'
+  const isSuperPlayer = session?.role === 'superplayer'
+  const seeAll        = isAdmin || isSuperPlayer
+  const isPlayer      = !!session && !seeAll
+  const userLeague    = (session as any)?.league ?? ''
 
   const sidebarData = await getSidebarData({
     userLeague: isPlayer ? userLeague : '',
@@ -42,9 +44,9 @@ export default async function LeaderboardPage() {
     exact:        u.predictions.filter(p => p.points === 5).length,
   })).sort((a, b) => b.total - a.total || a.display.localeCompare(b.display))
 
-  // Players see only their own league; admins + guests see all
+  // Players see only their own league; admins + superplayers + guests see all
   const board = isPlayer ? fullBoard.filter(p => p.league === userLeague) : fullBoard
-  const visibleLeagues = isAdmin ? LEAGUES : isPlayer ? [userLeague] : LEAGUES
+  const visibleLeagues = seeAll ? LEAGUES : isPlayer ? [userLeague] : LEAGUES
 
   const currentUserId = session?.id
 
@@ -66,7 +68,7 @@ export default async function LeaderboardPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Top Performers</h1>
               <p className="text-sm text-gray-500 mt-1">
-                {isAdmin
+                {seeAll
                   ? 'All players across all leagues.'
                   : isPlayer
                     ? `Showing ${userLeague} — your league.`
@@ -124,6 +126,9 @@ export default async function LeaderboardPage() {
                     {isAdmin && (
                       <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">Admin view</span>
                     )}
+                    {isSuperPlayer && (
+                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">⭐ SuperPlayer view</span>
+                    )}
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -131,7 +136,7 @@ export default async function LeaderboardPage() {
                         <tr>
                           <th className="px-4 py-3 text-left text-white text-xs font-bold">#</th>
                           <th className="px-4 py-3 text-left text-white text-xs font-bold">Player</th>
-                          {isAdmin && <th className="px-4 py-3 text-left text-white text-xs font-bold hidden sm:table-cell">League</th>}
+                          {seeAll && <th className="px-4 py-3 text-left text-white text-xs font-bold hidden sm:table-cell">League</th>}
                           <th className="px-4 py-3 text-center text-white text-xs font-bold">Matches</th>
                           <th className="px-4 py-3 text-center text-white text-xs font-bold">Exact</th>
                           <th className="px-4 py-3 text-center text-white text-xs font-bold">Pts</th>
@@ -156,7 +161,7 @@ export default async function LeaderboardPage() {
                               </div>
                               {p.cheeringFrom && <div className="text-xs text-gray-400">{p.cheeringFrom}</div>}
                             </td>
-                            {isAdmin && (
+                            {seeAll && (
                               <td className="px-4 py-3 text-xs text-gray-500 hidden sm:table-cell">{p.league}</td>
                             )}
                             <td className="px-4 py-3 text-center text-xs text-gray-500">{p.played}</td>
@@ -169,8 +174,8 @@ export default async function LeaderboardPage() {
                   </div>
                 </div>
 
-                {/* Admin: per-league breakdown tables */}
-                {isAdmin && visibleLeagues.map(league => {
+                {/* Admin/SuperPlayer: per-league breakdown tables */}
+                {seeAll && visibleLeagues.map(league => {
                   const members = fullBoard.filter(p => p.league === league)
                   if (members.length === 0) return null
                   return (

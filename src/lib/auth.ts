@@ -49,3 +49,8 @@ export async function requireAdmin() {
   if (user.role !== 'admin') throw new Error('FORBIDDEN')
   return user
 }
+
+/** True when user can see all leagues (admin or superplayer) */
+export function canSeeAllLeagues(role?: string | null) {
+  return role === 'admin' || role === 'superplayer'
+}

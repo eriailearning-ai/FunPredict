@@ -37,9 +37,10 @@ model User {
   predictions   Prediction[]
   sessions      Session[]
   leagueRel     League?       @relation(fields: [leagueId], references: [id])
-  bonusAnswers  BonusAnswer[]
-  pollVotes     PollVote[]
-  auditLogs     AuditLog[]
+  bonusAnswers      BonusAnswer[]
+  pollVotes         PollVote[]
+  auditLogs         AuditLog[]
+  shoutboxMessages  ShoutboxMessage[]
 }
 
 model Session {
@@ -182,6 +183,19 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Shoutbox ──────────────────────────────────────────────
+
+model ShoutboxMessage {
+  id        Int      @id @default(autoincrement())
+  userId    String?
+  guestName String   @default("Guest")
+  message   String
+  ip        String   @default("")
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 // ─── Site Settings ─────────────────────────────────────────

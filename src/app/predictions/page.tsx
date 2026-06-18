@@ -9,9 +9,11 @@ const LEAGUES = ['Aila Attackers', 'Sukuti Strikers', 'Gorkhali Gooners']
 
 export default async function PredictionsPage() {
   const user = await getSession().catch(() => null)
-  const isApproved  = user?.status === 'approved'
-  const isAdmin     = user?.role === 'admin'
-  const userLeague  = (user as any)?.league ?? ''
+  const isApproved    = user?.status === 'approved'
+  const isAdmin       = user?.role === 'admin'
+  const isSuperPlayer = user?.role === 'superplayer'
+  const seeAll        = isAdmin || isSuperPlayer
+  const userLeague    = (user as any)?.league ?? ''
 
   // All approved users for leaderboard + top performers
   const allUsers = await prisma.user.findMany({
@@ -29,14 +31,14 @@ export default async function PredictionsPage() {
     }))
     .sort((a, b) => b.total - a.total)
 
-  // Players see only their own league; admins see all
-  const isPlayer = isApproved && !isAdmin
+  // Players see only their own league; admins + superplayers see all
+  const isPlayer = isApproved && !seeAll
   const topPerformers = isPlayer
     ? fullBoard.filter(p => p.league === userLeague)
     : fullBoard
 
-  // Scoreboard tab: admins see all leagues, players see only their own
-  const visibleLeagues = isAdmin ? LEAGUES : (isPlayer ? [userLeague] : LEAGUES)
+  // Scoreboard tab: admins/superplayers see all leagues, players see only their own
+  const visibleLeagues = seeAll ? LEAGUES : (isPlayer ? [userLeague] : LEAGUES)
   const leagueScoreboards = visibleLeagues.map(league => ({
     league,
     players: (isAdmin ? fullBoard : topPerformers)

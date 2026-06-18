@@ -257,8 +257,8 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {u.role}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-yellow-100 text-yellow-700' : u.role === 'superplayer' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {u.role === 'superplayer' ? '⭐ superplayer' : u.role}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
@@ -300,8 +300,16 @@ export default function AdminUsersPage() {
                             className="text-xs text-green-600 hover:text-green-800 px-2 py-1 rounded hover:bg-green-50">Re-approve</button>
                         )}
                         {u.role === 'player' && u.status === 'approved' && (
-                          <button onClick={() => act(u.id, 'make_admin')} disabled={!!acting}
-                            className="text-xs text-yellow-600 hover:text-yellow-800 px-2 py-1 rounded hover:bg-yellow-50">Make admin</button>
+                          <>
+                            <button onClick={() => act(u.id, 'make_admin')} disabled={!!acting}
+                              className="text-xs text-yellow-600 hover:text-yellow-800 px-2 py-1 rounded hover:bg-yellow-50">Make admin</button>
+                            <button onClick={() => act(u.id, 'make_superplayer')} disabled={!!acting}
+                              className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50">⭐ SuperPlayer</button>
+                          </>
+                        )}
+                        {u.role === 'superplayer' && (
+                          <button onClick={() => act(u.id, 'make_player')} disabled={!!acting}
+                            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-50">Remove ⭐</button>
                         )}
                         {u.role === 'admin' && (
                           <button onClick={() => act(u.id, 'make_player')} disabled={!!acting}

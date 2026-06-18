@@ -4,6 +4,8 @@ import { useState } from 'react'
 export default function AdminSyncPage() {
   const [status, setStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
   const [result, setResult] = useState<any>(null)
+  const [pollStatus, setPollStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
+  const [pollResult, setPollResult] = useState<any>(null)
 
   async function sync() {
     setStatus('syncing')
@@ -16,6 +18,20 @@ export default function AdminSyncPage() {
     } catch (e: any) {
       setResult({ error: e.message })
       setStatus('error')
+    }
+  }
+
+  async function syncPolls() {
+    setPollStatus('syncing')
+    setPollResult(null)
+    try {
+      const res = await fetch('/api/polls')
+      const data = await res.json()
+      setPollResult({ ok: true, count: data.length })
+      setPollStatus('done')
+    } catch (e: any) {
+      setPollResult({ error: e.message })
+      setPollStatus('error')
     }
   }
 
@@ -64,6 +80,32 @@ export default function AdminSyncPage() {
                 <p>Predictions scored: {result.scored ?? 0}</p>
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Poll sync */}
+      <div className="bg-white rounded-xl shadow-sm p-5">
+        <h2 className="text-sm font-bold text-gray-800 mb-3">Auto-Create Audience Polls</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Automatically creates polls for the next 3 upcoming matches (if they don't already exist).
+          Run this after adding new matches.
+        </p>
+        <button
+          onClick={syncPolls}
+          disabled={pollStatus === 'syncing'}
+          className="px-6 py-2.5 rounded-lg text-white font-semibold text-sm disabled:opacity-50 transition-colors"
+          style={{ background: pollStatus === 'done' ? '#166534' : '#8b1c2c' }}
+        >
+          {pollStatus === 'syncing' ? '🔄 Creating polls…' : pollStatus === 'done' ? '✅ Polls synced' : '🗳 Sync Polls for Next 3 Matches'}
+        </button>
+
+        {pollResult && (
+          <div className={`mt-4 p-4 rounded-xl text-sm ${pollResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            {pollResult.error
+              ? <p className="text-red-700"><strong>Error:</strong> {pollResult.error}</p>
+              : <p className="text-green-800">✅ {pollResult.count} poll{pollResult.count !== 1 ? 's' : ''} ready for next 3 matches.</p>
+            }
           </div>
         )}
       </div>

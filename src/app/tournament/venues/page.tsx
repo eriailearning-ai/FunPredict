@@ -1,7 +1,6 @@
 import Navbar from '@/components/layout/Navbar'
 import Sidebar from '@/components/layout/Sidebar'
 import Footer from '@/components/layout/Footer'
-import SafeImg from '@/components/ui/SafeImg'
 import { getSidebarData } from '@/lib/sidebar'
 import { getSession } from '@/lib/auth'
 import Link from 'next/link'
@@ -9,23 +8,30 @@ import Link from 'next/link'
 export const revalidate = 3600
 
 const VENUES = [
-  { name: 'Estadio Azteca', city: 'Mexico City', country: 'Mexico', capacity: '87,523', img: 'estadio-azteca' },
-  { name: 'SoFi Stadium', city: 'Los Angeles', country: 'USA', capacity: '70,240', img: 'sofi-stadium' },
-  { name: 'MetLife Stadium', city: 'New York / New Jersey', country: 'USA', capacity: '82,500', img: 'metlife-stadium' },
-  { name: 'AT&T Stadium', city: 'Dallas', country: 'USA', capacity: '80,000', img: 'att-stadium' },
-  { name: 'Levi\'s Stadium', city: 'Santa Clara', country: 'USA', capacity: '68,500', img: 'levis-stadium' },
-  { name: 'Hard Rock Stadium', city: 'Miami', country: 'USA', capacity: '65,326', img: 'hard-rock-stadium' },
-  { name: 'Arrowhead Stadium', city: 'Kansas City', country: 'USA', capacity: '76,416', img: 'arrowhead-stadium' },
-  { name: 'Lincoln Financial Field', city: 'Philadelphia', country: 'USA', capacity: '69,176', img: 'lincoln-financial-field' },
-  { name: 'Gillette Stadium', city: 'Boston', country: 'USA', capacity: '65,878', img: 'gillette-stadium' },
-  { name: 'NRG Stadium', city: 'Houston', country: 'USA', capacity: '72,220', img: 'nrg-stadium' },
-  { name: 'BMO Field', city: 'Toronto', country: 'Canada', capacity: '30,000', img: 'bmo-field' },
-  { name: 'BC Place', city: 'Vancouver', country: 'Canada', capacity: '54,500', img: 'bc-place' },
-  { name: 'Estadio BBVA', city: 'Monterrey', country: 'Mexico', capacity: '53,500', img: 'estadio-bbva' },
-  { name: 'Estadio Akron', city: 'Guadalajara', country: 'Mexico', capacity: '49,850', img: 'estadio-akron' },
-  { name: 'Estadio Ciudad de México', city: 'Mexico City', country: 'Mexico', capacity: '55,000', img: 'estadio-cdmx' },
-  { name: 'Seattle Lumen Field', city: 'Seattle', country: 'USA', capacity: '68,740', img: 'lumen-field' },
+  { name: 'Arrowhead Stadium',       city: 'Kansas City, MO',           capacity: '76,000+', tz: 'America/Chicago'    },
+  { name: 'AT&T Stadium',             city: 'Arlington, TX (Dallas)',    capacity: '80,000+', tz: 'America/Chicago'    },
+  { name: 'BC Place',                 city: 'Vancouver, BC',             capacity: '54,000+', tz: 'America/Vancouver'  },
+  { name: 'BMO Field',                city: 'Toronto, ON',               capacity: '45,000+', tz: 'America/Toronto'    },
+  { name: 'Estadio Akron',            city: 'Guadalajara, Mexico',       capacity: '48,000+', tz: 'America/Mexico_City'},
+  { name: 'Estadio Azteca',           city: 'Mexico City, Mexico',       capacity: '87,000+', tz: 'America/Mexico_City'},
+  { name: 'Estadio BBVA',             city: 'Monterrey, Mexico',         capacity: '53,000+', tz: 'America/Mexico_City'},
+  { name: 'Gillette Stadium',         city: 'Foxborough, MA (Boston)',   capacity: '65,000+', tz: 'America/New_York'   },
+  { name: 'Hard Rock Stadium',        city: 'Miami Gardens, FL',         capacity: '65,000+', tz: 'America/New_York'   },
+  { name: "Levi's Stadium",           city: 'Santa Clara, CA (Bay Area)',capacity: '68,000+', tz: 'America/Los_Angeles'},
+  { name: 'Lincoln Financial Field',  city: 'Philadelphia, PA',          capacity: '69,000+', tz: 'America/New_York'   },
+  { name: 'Lumen Field',              city: 'Seattle, WA',               capacity: '69,000+', tz: 'America/Los_Angeles'},
+  { name: 'Mercedes-Benz Stadium',    city: 'Atlanta, GA',               capacity: '71,000+', tz: 'America/New_York'   },
+  { name: 'MetLife Stadium',          city: 'New York / New Jersey',     capacity: '82,500',  tz: 'America/New_York'   },
+  { name: 'NRG Stadium',              city: 'Houston, TX',               capacity: '72,000+', tz: 'America/Chicago'    },
+  { name: 'SoFi Stadium',             city: 'Los Angeles, CA',           capacity: '70,000+', tz: 'America/Los_Angeles'},
 ]
+
+function localTime(tz: string) {
+  return new Date().toLocaleString('en-US', {
+    timeZone: tz,
+    weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+}
 
 export default async function VenuesPage() {
   const [sidebarData, session] = await Promise.all([getSidebarData(), getSession().catch(() => null)])
@@ -50,20 +56,25 @@ export default async function VenuesPage() {
 
             <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {VENUES.map(v => (
-                <div key={v.name} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                  {/* Venue image placeholder */}
-                  <div className="h-36 relative flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1e3a5f, #8b1c2c)' }}>
-                    <SafeImg
-                      src={`/images/venues/${v.img}.jpg`}
-                      alt={v.name}
-                      className="w-full h-full object-cover absolute inset-0"
-                    />
-                    <span className="relative text-white text-4xl opacity-20">🏟️</span>
+                <div key={v.name} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow border border-gray-100">
+                  {/* Colour header */}
+                  <div className="h-24 flex flex-col items-center justify-center text-white" style={{ background: 'linear-gradient(135deg,#0d1b3e,#1e3a5f)' }}>
+                    <span className="text-3xl mb-1">🏟️</span>
+                    <span className="text-xs font-semibold tracking-wide uppercase opacity-70">Stadium</span>
                   </div>
                   <div className="p-4">
-                    <h3 className="font-bold text-sm text-gray-900">{v.name}</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">{v.city} · {v.country}</p>
-                    <p className="text-xs text-gray-400 mt-1">Capacity: {v.capacity}</p>
+                    <h3 className="font-bold text-sm text-gray-900 mb-0.5">{v.name}</h3>
+                    <p className="text-xs text-gray-500 mb-3">{v.city}</p>
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Capacity</span>
+                        <span className="font-semibold text-gray-700">{v.capacity}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Local time</span>
+                        <span className="font-medium text-gray-600">{localTime(v.tz)}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}

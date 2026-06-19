@@ -26,6 +26,26 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
+    "/predictions/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/predictions/page.js"
+    ],
+    "/tournament/teams/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/tournament/teams/page.js"
+    ],
+    "/tournament/groups/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/tournament/groups/page.js"
+    ],
+    "/schedule/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/schedule/page.js"
+    ],
     "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",

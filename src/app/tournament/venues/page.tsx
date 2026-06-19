@@ -8,22 +8,22 @@ import Link from 'next/link'
 export const revalidate = 3600
 
 const VENUES = [
-  { name: 'Arrowhead Stadium',       city: 'Kansas City, MO',           capacity: '76,000+', tz: 'America/Chicago'    },
-  { name: 'AT&T Stadium',             city: 'Arlington, TX (Dallas)',    capacity: '80,000+', tz: 'America/Chicago'    },
-  { name: 'BC Place',                 city: 'Vancouver, BC',             capacity: '54,000+', tz: 'America/Vancouver'  },
-  { name: 'BMO Field',                city: 'Toronto, ON',               capacity: '45,000+', tz: 'America/Toronto'    },
-  { name: 'Estadio Akron',            city: 'Guadalajara, Mexico',       capacity: '48,000+', tz: 'America/Mexico_City'},
-  { name: 'Estadio Azteca',           city: 'Mexico City, Mexico',       capacity: '87,000+', tz: 'America/Mexico_City'},
-  { name: 'Estadio BBVA',             city: 'Monterrey, Mexico',         capacity: '53,000+', tz: 'America/Mexico_City'},
-  { name: 'Gillette Stadium',         city: 'Foxborough, MA (Boston)',   capacity: '65,000+', tz: 'America/New_York'   },
-  { name: 'Hard Rock Stadium',        city: 'Miami Gardens, FL',         capacity: '65,000+', tz: 'America/New_York'   },
-  { name: "Levi's Stadium",           city: 'Santa Clara, CA (Bay Area)',capacity: '68,000+', tz: 'America/Los_Angeles'},
-  { name: 'Lincoln Financial Field',  city: 'Philadelphia, PA',          capacity: '69,000+', tz: 'America/New_York'   },
-  { name: 'Lumen Field',              city: 'Seattle, WA',               capacity: '69,000+', tz: 'America/Los_Angeles'},
-  { name: 'Mercedes-Benz Stadium',    city: 'Atlanta, GA',               capacity: '71,000+', tz: 'America/New_York'   },
-  { name: 'MetLife Stadium',          city: 'New York / New Jersey',     capacity: '82,500',  tz: 'America/New_York'   },
-  { name: 'NRG Stadium',              city: 'Houston, TX',               capacity: '72,000+', tz: 'America/Chicago'    },
-  { name: 'SoFi Stadium',             city: 'Los Angeles, CA',           capacity: '70,000+', tz: 'America/Los_Angeles'},
+  { name: 'Arrowhead Stadium',       city: 'Kansas City, MO',           capacity: '76,000+', tz: 'America/Chicago',    img: 'arrowhead-stadium'      },
+  { name: 'AT&T Stadium',             city: 'Arlington, TX (Dallas)',    capacity: '80,000+', tz: 'America/Chicago',    img: 'at-and-t-stadium'       },
+  { name: 'BC Place',                 city: 'Vancouver, BC',             capacity: '54,000+', tz: 'America/Vancouver',  img: 'bc-place'               },
+  { name: 'BMO Field',                city: 'Toronto, ON',               capacity: '45,000+', tz: 'America/Toronto',    img: 'bmo-field'              },
+  { name: 'Estadio Akron',            city: 'Guadalajara, Mexico',       capacity: '48,000+', tz: 'America/Mexico_City',img: 'estadio-akron'          },
+  { name: 'Estadio Azteca',           city: 'Mexico City, Mexico',       capacity: '87,000+', tz: 'America/Mexico_City',img: 'estadio-azteca'         },
+  { name: 'Estadio BBVA',             city: 'Monterrey, Mexico',         capacity: '53,000+', tz: 'America/Mexico_City',img: 'estadio-bbva'           },
+  { name: 'Gillette Stadium',         city: 'Foxborough, MA (Boston)',   capacity: '65,000+', tz: 'America/New_York',   img: 'gillette-stadium'       },
+  { name: 'Hard Rock Stadium',        city: 'Miami Gardens, FL',         capacity: '65,000+', tz: 'America/New_York',   img: 'hard-rock-stadium'      },
+  { name: "Levi's Stadium",           city: 'Santa Clara, CA (Bay Area)',capacity: '68,000+', tz: 'America/Los_Angeles',img: 'levis-stadium'          },
+  { name: 'Lincoln Financial Field',  city: 'Philadelphia, PA',          capacity: '69,000+', tz: 'America/New_York',   img: 'lincoln-financial-field'},
+  { name: 'Lumen Field',              city: 'Seattle, WA',               capacity: '69,000+', tz: 'America/Los_Angeles',img: 'lumen-field'            },
+  { name: 'Mercedes-Benz Stadium',    city: 'Atlanta, GA',               capacity: '71,000+', tz: 'America/New_York',   img: 'mercedes-benz-stadium'  },
+  { name: 'MetLife Stadium',          city: 'New York / New Jersey',     capacity: '82,500',  tz: 'America/New_York',   img: 'metlife-stadium'        },
+  { name: 'NRG Stadium',              city: 'Houston, TX',               capacity: '72,000+', tz: 'America/Chicago',    img: 'nrg-stadium'            },
+  { name: 'SoFi Stadium',             city: 'Los Angeles, CA',           capacity: '70,000+', tz: 'America/Los_Angeles',img: 'sofi-stadium'           },
 ]
 
 function localTime(tz: string) {
@@ -57,10 +57,19 @@ export default async function VenuesPage() {
             <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {VENUES.map(v => (
                 <div key={v.name} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow border border-gray-100">
-                  {/* Colour header */}
-                  <div className="h-24 flex flex-col items-center justify-center text-white" style={{ background: 'linear-gradient(135deg,#0d1b3e,#1e3a5f)' }}>
-                    <span className="text-3xl mb-1">🏟️</span>
-                    <span className="text-xs font-semibold tracking-wide uppercase opacity-70">Stadium</span>
+                  {/* Venue photo */}
+                  <div className="h-40 relative overflow-hidden bg-gray-200">
+                    <img
+                      src={`/images/venues/${v.img}.jpg`}
+                      alt={v.name}
+                      className="w-full h-full object-cover"
+                      onError={e => {
+                        const el = e.target as HTMLImageElement
+                        el.style.display = 'none'
+                        el.parentElement!.style.background = 'linear-gradient(135deg,#0d1b3e,#1e3a5f)'
+                        el.parentElement!.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:white;font-size:2rem">🏟️</div>'
+                      }}
+                    />
                   </div>
                   <div className="p-4">
                     <h3 className="font-bold text-sm text-gray-900 mb-0.5">{v.name}</h3>

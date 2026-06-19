@@ -43,9 +43,11 @@ type Props = {
 
 /* ─── Slideshow ─────────────────────────────────────────── */
 const SLIDES = [
-  { bg: '/images/banners/slide1.jpg', label: 'FOOTBALL SEASON' },
-  { bg: '/images/banners/slide2.jpg', label: 'GO · COMPETE · WIN' },
-  { bg: '/images/banners/slide3.jpg', label: 'PREDICT EVERY MATCH' },
+  { bg: '/images/banners/banner-02.png', label: 'FOOTBALL SEASON' },
+  { bg: '/images/banners/banner-05.png', label: 'GO · COMPETE · WIN' },
+  { bg: '/images/banners/banner-09.png', label: 'PREDICT EVERY MATCH' },
+  { bg: '/images/banners/banner-14.png', label: 'FIFA WORLD CUP 2026' },
+  { bg: '/images/banners/banner-20.png', label: 'FAMILY · FUN · FOOTBALL' },
 ]
 
 /* ─── Poll colors ───────────────────────────────────────── */

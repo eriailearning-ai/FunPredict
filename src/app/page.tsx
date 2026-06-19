@@ -55,7 +55,7 @@ export default async function Home() {
       <div className="relative overflow-hidden" style={{ height: 'clamp(160px, 35vw, 320px)' }}>
         {/* Background: try local image, fall back to gradient */}
         <div className="absolute inset-0 bg-cover bg-center" style={{
-          backgroundImage: `url(/images/banners/home-hero.jpg), linear-gradient(135deg,#0d1b3e,#8b1c2c)`
+          backgroundImage: `url(/images/banners/hero-soccer.png), linear-gradient(135deg,#0d1b3e,#8b1c2c)`
         }} />
         <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4">

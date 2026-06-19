@@ -31,7 +31,7 @@ export default function Navbar({ user }: Props) {
           {/* Logo */}
           <Link href="/" className="flex-shrink-0 flex items-center gap-2 mr-2">
             <img
-              src="/images/logo/eagle-logo.png"
+              src="/images/logo/cropped-worldcup-eagle-logo-1.png"
               alt="WorldCup FIFAFun 2026"
               className="h-12 w-auto"
               onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}

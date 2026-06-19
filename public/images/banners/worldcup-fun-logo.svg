@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="WorldCup Fun">
+  <defs>
+    <linearGradient id="wcf-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#002868"/>
+      <stop offset="55%" stop-color="#1a3d7a"/>
+      <stop offset="100%" stop-color="#b22234"/>
+    </linearGradient>
+    <linearGradient id="wcf-gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe566"/>
+      <stop offset="100%" stop-color="#ffd700"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="url(#wcf-bg)"/>
+  <circle cx="32" cy="32" r="28" fill="none" stroke="url(#wcf-gold)" stroke-width="2.5" opacity="0.95"/>
+  <circle cx="32" cy="32" r="17" fill="#fff"/>
+  <path fill="#002868" d="M32 17l4.2 8.6 9.4 1.4-6.8 6.6 1.6 9.3L32 38.5l-8.4 4.4 1.6-9.3-6.8-6.6 9.4-1.4L32 17z"/>
+  <path fill="#b22234" d="M32 22.5l2.4 4.9 5.4.8-3.9 3.8.9 5.3L32 34.8l-4.8 2.5.9-5.3-3.9-3.8 5.4-.8L32 22.5z" opacity="0.85"/>
+  <path fill="url(#wcf-gold)" d="M28 46h8l-1 6h-6l-1-6z"/>
+  <circle cx="32" cy="49" r="2.5" fill="#ffd700"/>
+</svg>

@@ -77,7 +77,7 @@ export default function RegisterPage() {
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 py-3 max-w-5xl mx-auto">
         <Link href="/" className="flex items-center gap-2">
-          <img src="/images/logo/eagle-logo.png" alt="FIFAFun" className="h-9 w-auto"
+          <img src="/images/logo/cropped-worldcup-eagle-logo-1.png" alt="FIFAFun" className="h-9 w-auto"
             onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
           <span className="text-white font-black text-base tracking-tight">FIFA<span className="text-yellow-400">Fun</span></span>
         </Link>

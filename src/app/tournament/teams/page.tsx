@@ -62,11 +62,25 @@ export default async function TeamsPage() {
                       </h2>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {groupTeams.map((t: any) => (
-                          <div key={t.id} className="bg-white rounded-xl shadow-sm p-4 flex flex-col items-center gap-3 hover:shadow-md transition-shadow border border-gray-100">
-                            <FlagImg iso2={isoFlag(t.code)} name={t.name} size="lg" />
-                            <div className="text-center">
-                              <p className="text-xs font-bold text-gray-800">{t.name}</p>
-                              <p className="text-[10px] text-gray-400 mt-0.5">{t.code}</p>
+                          <div key={t.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow border border-gray-100">
+                            {/* Team photo */}
+                            <div className="h-28 relative overflow-hidden bg-gray-100">
+                              <img
+                                src={`/images/teams/${t.name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')}.jpg`}
+                                alt={t.name}
+                                className="w-full h-full object-cover"
+                                onError={e => {
+                                  const el = e.target as HTMLImageElement
+                                  el.style.display = 'none'
+                                }}
+                              />
+                            </div>
+                            <div className="p-3 flex flex-col items-center gap-2">
+                              <FlagImg iso2={isoFlag(t.code)} name={t.name} size="md" />
+                              <div className="text-center">
+                                <p className="text-xs font-bold text-gray-800">{t.name}</p>
+                                <p className="text-[10px] text-gray-400 mt-0.5">{t.code}</p>
+                              </div>
                             </div>
                           </div>
                         ))}

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="hero" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#002868"/>
+      <stop offset="50%" stop-color="#1a3d6e"/>
+      <stop offset="100%" stop-color="#b22234"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="400" fill="url(#hero)"/>
+  <ellipse cx="600" cy="420" rx="520" ry="80" fill="#0d5c2e" opacity="0.35"/>
+  <circle cx="200" cy="120" r="3" fill="#fff" opacity="0.15"/>
+  <circle cx="900" cy="80" r="2" fill="#fff" opacity="0.2"/>
+  <circle cx="1000" cy="200" r="4" fill="#ffd700" opacity="0.25"/>
+  <text x="600" y="210" text-anchor="middle" fill="#ffd700" font-family="system-ui,sans-serif" font-size="48" font-weight="800" opacity="0.9">WORLD CUP 2026</text>
+  <text x="600" y="250" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="22" font-weight="600" opacity="0.85">Predict · Compete · Have fun</text>
+</svg>

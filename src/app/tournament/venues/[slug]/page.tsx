@@ -7,12 +7,13 @@ import { getSidebarData } from '@/lib/sidebar'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { toIso2 } from '@/lib/flags'
-import { fmtTime, fmtDate, stageName } from '@/lib/fmt'
+import { fmtDate, stageName } from '@/lib/fmt'
+import LocalTime from '@/components/ui/LocalTime'
 import { VENUES } from '@/lib/venues'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 function localTime(tz: string) {
   return new Date().toLocaleString('en-US', {
@@ -27,7 +28,7 @@ export default async function VenueDetailPage({ params }: Props) {
   if (!venue) notFound()
 
   const [sidebarData, session, allMatches] = await Promise.all([
-    getSidebarData(),
+    getSidebarData().catch(() => ({ topPerformers: [], nextMatch: null, comingUp: null, groupAStandings: [], topScorers: [] })),
     getSession().catch(() => null),
     prisma.match.findMany({
       include: { homeTeam: true, awayTeam: true },
@@ -100,8 +101,9 @@ export default async function VenueDetailPage({ params }: Props) {
 
             {venueMatches.length === 0 ? (
               <div className="bg-white rounded-xl p-8 text-center text-gray-400">
-                <p>No matches scheduled at this venue yet.</p>
-                <p className="text-xs mt-1">Seed the database via Admin → Seed DB.</p>
+                <p className="text-2xl mb-2">🏟️</p>
+                <p className="font-semibold">Match data loading…</p>
+                <p className="text-xs mt-1">Please try refreshing in a moment.</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -117,7 +119,7 @@ export default async function VenueDetailPage({ params }: Props) {
                           <span className="text-lg font-black text-gray-900">{m.homeScore}–{m.awayScore}</span>
                         ) : (
                           <div>
-                            <p className="text-sm font-bold" style={{ color: '#1e3a5f' }}>{fmtTime(m.matchDate)}</p>
+                            <LocalTime iso={m.matchDate} className="text-sm font-bold" color="#1e3a5f" />
                             <p className="text-[10px] text-gray-400">{fmtDate(m.matchDate)}</p>
                           </div>
                         )}

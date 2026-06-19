@@ -56,15 +56,6 @@ export default function Sidebar({ topPerformers, nextMatch, comingUp, groupAStan
         </div>
       </div>
 
-      {/* ── COUNT ME IN (guests) ── */}
-      {!isLoggedIn && (
-        <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
-          <p className="text-xs text-gray-600 text-center font-semibold">Count Me In!</p>
-          <Link href="/auth/register" className="block text-center py-2.5 rounded-lg text-white text-sm font-semibold" style={{ background: '#8b1c2c' }}>Register</Link>
-          <Link href="/auth/login"    className="block text-center py-2.5 rounded-lg text-white text-sm font-semibold" style={{ background: '#1e3a5f' }}>Log in</Link>
-        </div>
-      )}
-
       {/* ── NEXT MATCH (countdown + flags) ── */}
       {nextMatch && (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -191,23 +182,6 @@ export default function Sidebar({ topPerformers, nextMatch, comingUp, groupAStan
             ))}
           </div>
         )}
-      </div>
-
-      {/* ── TOURNAMENT LINKS ── */}
-      <div className="bg-white rounded-xl shadow-sm p-4">
-        <p className="text-xs font-bold text-gray-700 uppercase tracking-widest mb-3">Tournament</p>
-        <div className="space-y-1.5 text-xs">
-          <Link href="/schedule"           className="block text-gray-600 hover:text-blue-600 hover:underline">Full Schedule</Link>
-          <Link href="/tournament/groups"  className="block text-gray-600 hover:text-blue-600 hover:underline">Groups</Link>
-          <Link href="/tournament/teams"   className="block text-gray-600 hover:text-blue-600 hover:underline">Teams</Link>
-          <Link href="/tournament/venues"  className="block text-gray-600 hover:text-blue-600 hover:underline">Venues</Link>
-        </div>
-        <p className="text-xs font-bold text-gray-700 uppercase tracking-widest mt-4 mb-3">Community</p>
-        <div className="space-y-1.5 text-xs">
-          <Link href="/highlights"              className="block text-gray-600 hover:text-blue-600 hover:underline">Highlights</Link>
-          <Link href="/discussions#crowd-pick"  className="block text-gray-600 hover:text-blue-600 hover:underline">Audience Poll</Link>
-          <Link href="/discussions"             className="block text-gray-600 hover:text-blue-600 hover:underline">Discussions</Link>
-        </div>
       </div>
 
     </aside>

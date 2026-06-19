@@ -10,11 +10,14 @@ import { prisma } from '@/lib/db'
 import { toIso2 } from '@/lib/flags'
 import Link from 'next/link'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 export default async function TournamentPage() {
   const [sidebarData, session, rawMatches] = await Promise.all([
-    getSidebarData(),
+    getSidebarData().catch(() => ({
+      topPerformers: [], nextMatch: null, comingUp: null,
+      groupAStandings: [], topScorers: [],
+    })),
     getSession().catch(() => null),
     prisma.match.findMany({
       include: { homeTeam: true, awayTeam: true },

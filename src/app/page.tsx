@@ -1,13 +1,15 @@
 import Navbar from '@/components/layout/Navbar'
 import Sidebar from '@/components/layout/Sidebar'
 import Footer from '@/components/layout/Footer'
-import BannerCarousel from '@/components/ui/BannerCarousel'
+import SiteBanner from '@/components/ui/SiteBanner'
+import LiveMatchCards, { type LiveMatch } from '@/components/ui/LiveMatchCards'
 import { getSidebarData } from '@/lib/sidebar'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { toIso2 } from '@/lib/flags'
 import Link from 'next/link'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 const LEAGUES = ['Aila Attackers', 'Sukuti Strikers', 'Gorkhali Gooners']
 const LEAGUE_BORDER: Record<string, string> = {
@@ -26,16 +28,56 @@ export default async function Home() {
   const sidebarData = await getSidebarData({
     userLeague: isLoggedIn ? userLeague : '',
     isAdmin,
-  })
+  }).catch(() => ({
+    topPerformers: [], nextMatch: null, comingUp: null,
+    groupAStandings: [], topScorers: [],
+  }))
+
+  // Visit stats for admin display
+  const visitStatsSetting = isAdmin
+    ? await prisma.setting.findUnique({ where: { key: 'site_visit_stats' } }).catch(() => null)
+    : null
+  let visitStats: { total: number; unique: number } | null = null
+  if (visitStatsSetting) {
+    try { visitStats = JSON.parse(visitStatsSetting.value) } catch {}
+  }
+
+  // Fetch: any live matches + next upcoming + recently finished (last 2 days)
+  const nowUtc = new Date()
+  const twoDaysAgo = new Date(nowUtc.getTime() - 2 * 24 * 60 * 60 * 1000)
+
+  const rawLiveMatches = await prisma.match.findMany({
+    where: {
+      OR: [
+        { status: 'live' },
+        { status: 'upcoming' },                                        // all upcoming
+        { status: 'finished', matchDate: { gte: twoDaysAgo } },       // recent results
+      ],
+    },
+    orderBy: { matchDate: 'asc' },
+    include: { homeTeam: true, awayTeam: true },
+    take: 12,
+  }).catch(() => [])
+
+  const liveMatches: LiveMatch[] = rawLiveMatches.map(m => ({
+    id: m.id,
+    homeTeam: { name: m.homeTeam.name, flag: toIso2(m.homeTeam.code) },
+    awayTeam: { name: m.awayTeam.name, flag: toIso2(m.awayTeam.code) },
+    matchDate: m.matchDate.toISOString(),
+    stage: m.stage,
+    group: m.group,
+    venue: m.venue,
+    status: m.status,
+    homeScore: m.homeScore ?? null,
+    awayScore: m.awayScore ?? null,
+  }))
 
   const approvedUsers = await prisma.user.findMany({
     where: { status: 'approved' },
     include: { predictions: { select: { points: true } } },
   }).catch(() => [])
 
-  // Show all leagues to everyone (WP site shows all 3 leagues publicly)
   const visibleLeagues = LEAGUES
-
   const leagueBoards = visibleLeagues.map(league => {
     const members = approvedUsers
       .filter(u => (u as any).league === league)
@@ -51,61 +93,23 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>
-      <Navbar user={session ? { name: session.name, nickname: (session as any).nickname, role: session.role } : null} />
+      <Navbar
+        user={session ? { name: session.name, nickname: (session as any).nickname, role: session.role } : null}
+        visitStats={visitStats}
+      />
 
-      {/* ── Banner with logo overlay ── */}
-      <div className="relative">
-        {/* Logo overlaid at top-left of banner */}
-        <div
-          className="absolute hidden sm:flex items-end justify-center bg-white shadow-lg"
-          style={{
-            left: 24, top: 0, zIndex: 20,
-            borderRadius: '0 0 20px 20px',
-            padding: '6px 14px 14px',
-            minWidth: 140,
-          }}
-        >
-          <img
-            src="/images/logo/cropped-worldcup-eagle-logo-1.png"
-            alt="FIFAFun 2026"
-            style={{ height: 110, width: 'auto' }}
-          />
-        </div>
-
-        <BannerCarousel>
-          {/* Hero text centered in banner */}
-          <p className="text-xs sm:text-sm tracking-[0.3em] text-yellow-400 font-bold uppercase mb-2">WorldCup Fun</p>
-          <h1 className="text-xl sm:text-3xl font-black mb-3 text-center">Welcome to FIFAFun Predict!</h1>
-          <p className="text-sm text-gray-300 mb-5 max-w-md text-center">
-            Predict scores, preview league leaders, and register free to join FIFAFun.
-          </p>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {isLoggedIn ? (
-              <>
-                <Link href="/predictions" className="px-4 py-2 rounded-lg font-semibold text-sm text-white" style={{ background: '#8b1c2c' }}>Go FIFAFun ⚽</Link>
-                <Link href="/leaderboard" className="px-4 py-2 rounded-lg font-semibold text-sm text-white" style={{ background: '#1e3a5f' }}>
-                  {myLeague ? myLeague + ' standings' : 'League standings'}
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link href="/auth/register" className="px-4 py-2 rounded-lg font-semibold text-sm text-white" style={{ background: '#8b1c2c' }}>Register free</Link>
-                <Link href="/auth/login" className="px-4 py-2 rounded-lg font-semibold text-sm text-white" style={{ background: '#1e3a5f' }}>Log in</Link>
-                <Link href="/leaderboard" className="px-4 py-2 rounded-lg font-semibold text-sm text-white" style={{ border: '1px solid rgba(255,255,255,0.6)' }}>
-                  League standings
-                </Link>
-              </>
-            )}
-          </div>
-        </BannerCarousel>
-      </div>
+      {/* ── Banner — logo overlay is built into SiteBanner ── */}
+      <SiteBanner />
 
       {/* Main layout */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 flex flex-col lg:flex-row gap-6">
 
         {/* LEFT / MAIN */}
         <main className="flex-1 min-w-0 space-y-6">
-          {/* League standings anchor */}
+          {/* ── Follow the World Cup action ── */}
+          <LiveMatchCards matches={liveMatches} />
+
+          {/* League standings */}
           <div id="wcp-league-dashboard-title">
             <h2 className="text-2xl font-bold text-gray-900 mb-1">League Standings</h2>
             <p className="text-sm text-gray-500 mb-4">

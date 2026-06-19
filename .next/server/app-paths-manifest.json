@@ -1,8 +1,7 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/predictions/page": "app/predictions/page.js",
-  "/auth/login/page": "app/auth/login/page.js",
-  "/api/sync-scores/route": "app/api/sync-scores/route.js",
-  "/api/scores/me/route": "app/api/scores/me/route.js",
-  "/admin/sync/page": "app/admin/sync/page.js"
+  "/tournament/page": "app/tournament/page.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/page": "app/page.js",
+  "/auth/login/page": "app/auth/login/page.js"
 }

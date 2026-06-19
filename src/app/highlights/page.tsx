@@ -7,7 +7,7 @@ import { getSidebarData } from '@/lib/sidebar'
 import { getSession } from '@/lib/auth'
 import Link from 'next/link'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 const HIGHLIGHTS = [
   { title: 'Germany 7–1 Curaçao', date: 'Jun 14', group: 'Group E', home: 'de', away: 'cw', result: '7–1', story: 'A stunning opener for Germany, who put seven past Curaçao in their World Cup debut match.' },

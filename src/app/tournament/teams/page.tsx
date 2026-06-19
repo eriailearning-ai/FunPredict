@@ -11,11 +11,14 @@ import { toIso2 } from '@/lib/flags'
 import { CONFEDERATION } from '@/lib/fmt'
 import Link from 'next/link'
 
-export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 export default async function TeamsPage() {
   const [sidebarData, session, rawTeams] = await Promise.all([
-    getSidebarData(),
+    getSidebarData().catch(() => ({
+      topPerformers: [], nextMatch: null, comingUp: null,
+      groupAStandings: [], topScorers: [],
+    })),
     getSession().catch(() => null),
     prisma.team.findMany({ orderBy: [{ group: 'asc' }, { name: 'asc' }] }).catch(() => []),
   ])

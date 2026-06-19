@@ -7,7 +7,7 @@ import { getSession } from '@/lib/auth'
 import { VENUES } from '@/lib/venues'
 import Link from 'next/link'
 
-export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 function localTime(tz: string) {
   return new Date().toLocaleString('en-US', {
@@ -17,7 +17,10 @@ function localTime(tz: string) {
 }
 
 export default async function VenuesPage() {
-  const [sidebarData, session] = await Promise.all([getSidebarData(), getSession().catch(() => null)])
+  const [sidebarData, session] = await Promise.all([
+    getSidebarData().catch(() => ({ topPerformers: [], nextMatch: null, comingUp: null, groupAStandings: [], topScorers: [] })),
+    getSession().catch(() => null),
+  ])
 
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>

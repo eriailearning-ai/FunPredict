@@ -1,20 +1,30 @@
 import Navbar from '@/components/layout/Navbar'
-import Sidebar from '@/components/layout/Sidebar'
 import Footer from '@/components/layout/Footer'
 import SiteBanner from '@/components/ui/SiteBanner'
 import FlagImg from '@/components/ui/FlagImg'
-import { getSidebarData } from '@/lib/sidebar'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { toIso2 } from '@/lib/flags'
-import { fmtTime, fmtDayHeader, stageLine } from '@/lib/fmt'
+import { stageName } from '@/lib/fmt'
+import LocalTime from '@/components/ui/LocalTime'
 import Link from 'next/link'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
+
+/** Short date label like "Thu, Jun 12" */
+function fmtDayShort(d: Date | string): string {
+  return new Date(d).toLocaleDateString('en-US', {
+    weekday: 'short', day: 'numeric', month: 'short',
+  })
+}
+
+/** "YYYY-MM-DD" key for grouping */
+function dayKey(d: Date | string): string {
+  return new Date(d).toISOString().slice(0, 10)
+}
 
 export default async function SchedulePage() {
-  const [sidebarData, session, matches] = await Promise.all([
-    getSidebarData(),
+  const [session, matches] = await Promise.all([
     getSession().catch(() => null),
     prisma.match.findMany({
       include: { homeTeam: true, awayTeam: true },
@@ -22,117 +32,121 @@ export default async function SchedulePage() {
     }).catch(() => []),
   ])
 
-  // Group by day string
-  const byDate: Record<string, any[]> = {}
-  for (const m of matches) {
-    const key = fmtDayHeader(m.matchDate)
-    if (!byDate[key]) byDate[key] = []
-    byDate[key].push(m)
-  }
-
   const isApproved = (session as any)?.status === 'approved'
+
+  // Group by day
+  const byDate: Record<string, typeof matches> = {}
+  for (const m of matches) {
+    const k = dayKey(m.matchDate)
+    if (!byDate[k]) byDate[k] = []
+    byDate[k].push(m)
+  }
+  const dayKeys = Object.keys(byDate).sort()
 
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>
       <Navbar user={session ? { name: session.name, nickname: (session as any).nickname, role: session.role } : null} />
       <SiteBanner />
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6">
         <nav className="text-xs text-gray-400 mb-4">
           <Link href="/" className="hover:underline">Home</Link>
           <span className="mx-2">→</span>
           <span className="text-gray-700">Full Schedule</span>
         </nav>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          <main className="flex-1 min-w-0 space-y-4">
-
-            {/* Dark header card */}
-            <div className="rounded-xl px-6 py-5" style={{ background: 'linear-gradient(135deg,#0d1b3e 0%,#1e3a5f 50%,#8b1c2c 100%)' }}>
+        {/* Header */}
+        <div className="rounded-xl px-6 py-5 mb-5" style={{ background: 'linear-gradient(135deg,#0d1b3e 0%,#1e3a5f 50%,#8b1c2c 100%)' }}>
+          <div className="flex items-center justify-between">
+            <div>
               <h1 className="text-2xl font-black text-yellow-400 mb-1">Full Schedule</h1>
-              <p className="text-sm text-gray-300">Full World Cup 2026 schedule grouped by day. Tap match to predict or view stats.</p>
+              <p className="text-sm text-gray-300">
+                {matches.length > 0
+                  ? `${matches.length} matches across ${dayKeys.length} matchdays`
+                  : 'FIFA World Cup 2026™ complete schedule'}
+              </p>
             </div>
-
-            {/* Tab bar */}
-            <div className="rounded-lg overflow-hidden flex" style={{ background: '#111827' }}>
-              <span className="px-4 py-2.5 text-xs font-bold text-white tracking-widest uppercase border-b-2 border-yellow-400">
-                MATCHES
-              </span>
-            </div>
-
-            {/* BY DAY / BRACKET links */}
-            <div className="flex rounded-lg overflow-hidden border border-gray-200">
-              <Link
-                href="/schedule"
-                className="flex-1 py-3 text-sm font-bold tracking-wide text-center text-white"
-                style={{ background: '#1e3a5f' }}
-              >
-                BY DAY
-              </Link>
-              <Link
-                href="/tournament"
-                className="flex-1 py-3 text-sm font-bold tracking-wide text-center border-l border-gray-200 text-gray-600"
-                style={{ background: '#f3f4f6' }}
-              >
-                FULL BRACKET
-              </Link>
-            </div>
-
-            {matches.length === 0 ? (
-              <div className="bg-white rounded-xl p-8 text-center text-gray-400">
-                <p>No matches loaded yet.</p>
-                <p className="text-xs mt-2">Use Admin → Seed DB to import the schedule.</p>
-              </div>
-            ) : (
-              Object.entries(byDate).map(([dateStr, dayMatches]) => (
-                <div key={dateStr}>
-                  {/* Day header */}
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-lg font-black text-gray-900">{dateStr}</h2>
-                    <Link href="/tournament/groups" className="text-xs font-semibold hover:underline" style={{ color: '#8b1c2c' }}>
-                      View groups
-                    </Link>
-                  </div>
-
-                  <div className="space-y-2 mb-6">
-                    {dayMatches.map((m: any) => (
-                      <div key={m.id} className="bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          {/* Home */}
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <FlagImg iso2={toIso2(m.homeTeam?.code ?? '')} name={m.homeTeam?.name ?? ''} size="md" />
-                            <span className="text-sm font-semibold text-gray-800 truncate">{m.homeTeam?.name}</span>
-                          </div>
-                          {/* Score or time */}
-                          <div className="text-center flex-shrink-0 w-16">
-                            {m.status === 'finished' ? (
-                              <span className="text-lg font-black text-gray-900">{m.homeScore}–{m.awayScore}</span>
-                            ) : (
-                              <span className="text-sm font-bold" style={{ color: '#1e3a5f' }}>{fmtTime(m.matchDate)}</span>
-                            )}
-                          </div>
-                          {/* Away */}
-                          <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                            <span className="text-sm font-semibold text-gray-800 text-right truncate">{m.awayTeam?.name}</span>
-                            <FlagImg iso2={toIso2(m.awayTeam?.code ?? '')} name={m.awayTeam?.name ?? ''} size="md" />
-                          </div>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1.5">{stageLine(m.stage, m.group, m.venue)}</p>
-                        {isApproved && m.status === 'upcoming' && !m.locked && (
-                          <Link href="/predictions" className="text-xs font-semibold hover:underline block mt-1" style={{ color: '#8b1c2c' }}>
-                            Enter your prediction →
-                          </Link>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-          </main>
-
-          <Sidebar {...sidebarData} isLoggedIn={!!session} />
+            <Link href="/tournament" className="px-4 py-2 rounded-lg text-white text-sm font-semibold border border-white/30 hover:bg-white/10 transition-colors">
+              Full Bracket →
+            </Link>
+          </div>
         </div>
+
+        {/* Schedule */}
+        {matches.length === 0 ? (
+          <div className="bg-white rounded-xl p-10 text-center text-gray-400">
+            <p className="text-4xl mb-3">⚽</p>
+            <p className="font-semibold">Schedule loading…</p>
+            <p className="text-xs mt-1">Please try refreshing in a moment.</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {dayKeys.map(dk => (
+              <div key={dk}>
+                {/* Day header */}
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="h-px flex-1 bg-gray-200" />
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider px-2">
+                    {fmtDayShort(byDate[dk][0].matchDate)}
+                  </span>
+                  <div className="h-px flex-1 bg-gray-200" />
+                </div>
+
+                {/* Match rows for this day */}
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden divide-y divide-gray-50">
+                  {byDate[dk].map((m) => {
+                    const finished = m.status === 'finished'
+                    const live     = m.status === 'live'
+                    return (
+                      <div key={m.id} className="flex items-center gap-2 sm:gap-4 px-4 py-3">
+                        {/* Time / Score */}
+                        <div className="w-16 sm:w-20 flex-shrink-0 text-center">
+                          {finished ? (
+                            <span className="text-sm font-black text-gray-900">{m.homeScore}–{m.awayScore}</span>
+                          ) : live ? (
+                            <span className="text-xs font-bold text-green-600">LIVE</span>
+                          ) : (
+                            <LocalTime iso={m.matchDate.toISOString()} className="text-xs font-semibold" color="#1e3a5f" />
+                          )}
+                        </div>
+
+                        {/* Home team */}
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
+                          <span className={`text-sm truncate ${finished && m.homeScore! > m.awayScore! ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
+                            {m.homeTeam.name}
+                          </span>
+                          <FlagImg iso2={toIso2(m.homeTeam.code)} name={m.homeTeam.name} size="sm" />
+                        </div>
+
+                        {/* vs divider */}
+                        <span className="text-[10px] text-gray-300 font-medium flex-shrink-0 hidden sm:block">vs</span>
+
+                        {/* Away team */}
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          <FlagImg iso2={toIso2(m.awayTeam.code)} name={m.awayTeam.name} size="sm" />
+                          <span className={`text-sm truncate ${finished && m.awayScore! > m.homeScore! ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
+                            {m.awayTeam.name}
+                          </span>
+                        </div>
+
+                        {/* Stage info (desktop only) */}
+                        <div className="hidden sm:flex flex-col items-end flex-shrink-0 w-36">
+                          <span className="text-[10px] text-gray-400 text-right leading-tight">{stageName(m.stage, m.group)}</span>
+                          {m.venue && <span className="text-[10px] text-gray-300 text-right truncate w-full">{m.venue}</span>}
+                          {isApproved && m.status === 'upcoming' && !(m as any).locked && (
+                            <Link href="/predictions" className="text-[10px] font-semibold hover:underline mt-0.5" style={{ color: '#8b1c2c' }}>
+                              Predict →
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <Footer />

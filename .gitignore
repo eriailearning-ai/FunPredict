@@ -9,3 +9,6 @@ _prisma_prebuilt/
 
 .env
 .vercel
+.env.local
+.env*.local
+prisma/dev.db

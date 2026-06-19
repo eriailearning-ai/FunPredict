@@ -7,7 +7,7 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import Link from 'next/link'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 const LEAGUES = ['Aila Attackers', 'Sukuti Strikers', 'Gorkhali Gooners']
 

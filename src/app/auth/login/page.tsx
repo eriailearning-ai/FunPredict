@@ -20,10 +20,17 @@ function LoginForm() {
 
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 py-3 max-w-5xl mx-auto w-full">
-        <Link href="/" className="flex items-center gap-2">
-          <img src="/images/logo/cropped-worldcup-eagle-logo-1.png" alt="FIFAFun" className="h-9 w-auto"
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-          <span className="text-white font-black text-base tracking-tight">FIFA<span className="text-yellow-400">Fun</span></span>
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="rounded-2xl overflow-hidden bg-white shadow-lg flex-shrink-0"
+            style={{ width: 72, height: 72, padding: 4 }}>
+            <img src="/images/logo/cropped-worldcup-eagle-logo-1.png" alt="FIFAFun"
+              className="w-full h-full object-contain"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+          </div>
+          <span className="text-white font-black text-base tracking-tight leading-tight">
+            FIFA<span className="text-yellow-400">Fun</span><br />
+            <span className="text-xs font-semibold text-blue-200 tracking-wide">World Cup 2026</span>
+          </span>
         </Link>
         <Link href="/auth/register" className="text-sm text-yellow-400 font-semibold hover:text-yellow-300">
           Register free →

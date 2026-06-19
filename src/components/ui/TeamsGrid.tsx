@@ -1,15 +1,18 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import FlagImg from '@/components/ui/FlagImg'
 
 const HOST_CODES = ['MEX', 'CAN', 'USA']
-const HOST_COLORS: Record<string, string> = {
-  MEX: '#166534',
-  CAN: '#991b1b',
-  USA: '#1e3a5f',
+const CONFED_ORDER = ['ALL', 'AFC', 'CAF', 'CONCACAF', 'CONMEBOL', 'OFC', 'UEFA']
+const CONFED_LABEL: Record<string, string> = {
+  ALL: 'All Teams',
+  AFC: 'AFC',
+  CAF: 'CAF',
+  CONCACAF: 'CONCACAF',
+  CONMEBOL: 'CONMEBOL',
+  OFC: 'OFC',
+  UEFA: 'UEFA',
 }
-const CONFEDS = ['ALL', 'AFC', 'CAF', 'CONCACAF', 'CONMEBOL', 'OFC', 'UEFA']
 
 export interface TeamRow {
   id: number
@@ -20,104 +23,126 @@ export interface TeamRow {
   confederation: string
 }
 
+const FLAG_BASE = 'https://flagcdn.com'
+
+function FlagCard({ iso2, name }: { iso2: string; name: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`${FLAG_BASE}/w320/${iso2}.png`}
+      alt={name}
+      className="w-full h-full object-cover"
+      onError={e => { (e.currentTarget as HTMLImageElement).src = `${FLAG_BASE}/w320/un.png` }}
+    />
+  )
+}
+
 export default function TeamsGrid({ teams }: { teams: TeamRow[] }) {
   const [confed, setConfed] = useState('ALL')
+  const [search, setSearch] = useState('')
 
-  const visible = confed === 'ALL' ? teams : teams.filter(t => t.confederation === confed)
-  const hosts     = visible.filter(t => HOST_CODES.includes(t.code))
-  const qualified = visible.filter(t => !HOST_CODES.includes(t.code)).sort((a, b) => a.name.localeCompare(b.name))
+  const confedCounts: Record<string, number> = { ALL: teams.length }
+  for (const t of teams) confedCounts[t.confederation] = (confedCounts[t.confederation] ?? 0) + 1
+
+  let visible = confed === 'ALL' ? teams : teams.filter(t => t.confederation === confed)
+  if (search.trim()) {
+    const q = search.toLowerCase()
+    visible = visible.filter(t => t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q))
+  }
+
+  // Sort: hosts first, then alphabetical
+  const sorted = [...visible].sort((a, b) => {
+    const aHost = HOST_CODES.includes(a.code) ? 0 : 1
+    const bHost = HOST_CODES.includes(b.code) ? 0 : 1
+    if (aHost !== bHost) return aHost - bHost
+    return a.name.localeCompare(b.name)
+  })
 
   return (
-    <div className="space-y-5">
-      {/* Header card */}
-      <div className="rounded-xl px-6 py-5" style={{ background: 'linear-gradient(135deg,#0d1b3e 0%,#1e3a5f 50%,#8b1c2c 100%)' }}>
-        <h1 className="text-2xl font-black text-yellow-400 mb-1">Teams</h1>
-        <p className="text-sm text-gray-300">All {teams.length} qualified nations. Click a team to see their squad and fixtures.</p>
+    <div>
+      {/* Hero header */}
+      <div className="px-6 py-6 rounded-t-xl mb-0" style={{ background: 'linear-gradient(135deg,#0d1b3e 0%,#1e3a5f 60%,#8b1c2c 100%)' }}>
+        <p className="text-xs font-bold tracking-widest text-yellow-400 uppercase mb-1">FIFA World Cup 2026™</p>
+        <h1 className="text-2xl sm:text-3xl font-black text-white">Teams</h1>
+        <p className="text-sm text-gray-300 mt-1">All {teams.length} qualified nations for the 2026 World Cup</p>
       </div>
 
-      {/* Confederation filter */}
-      <div className="flex flex-wrap gap-2">
-        {CONFEDS.map(c => (
-          <button
-            key={c}
-            onClick={() => setConfed(c)}
-            className="px-3 py-1 rounded text-xs font-bold border transition-colors"
-            style={{
-              background: confed === c ? '#1e3a5f' : '#fff',
-              color: confed === c ? '#fff' : '#374151',
-              borderColor: confed === c ? '#1e3a5f' : '#d1d5db',
-            }}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-
-      {teams.length === 0 ? (
-        <div className="bg-white rounded-xl p-8 text-center text-gray-400">
-          <p>Teams not yet loaded. Use Admin → Seed DB to import.</p>
+      {/* Filter bar */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        {/* Confederation tabs */}
+        <div className="flex flex-wrap gap-1.5">
+          {CONFED_ORDER.filter(c => c === 'ALL' || (confedCounts[c] ?? 0) > 0).map(c => (
+            <button key={c} onClick={() => setConfed(c)}
+              className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border"
+              style={{
+                background: confed === c ? '#1e3a5f' : '#f3f4f6',
+                color: confed === c ? '#fff' : '#374151',
+                borderColor: confed === c ? '#1e3a5f' : '#e5e7eb',
+              }}>
+              {CONFED_LABEL[c]}{c !== 'ALL' ? ` (${confedCounts[c] ?? 0})` : ''}
+            </button>
+          ))}
         </div>
-      ) : (
-        <>
-          {/* Host countries */}
-          {hosts.length > 0 && (
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-3">Host country</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {hosts.map(t => (
-                  <Link key={t.id} href={`/tournament/teams/${t.code}`}>
-                    <div className="rounded-xl p-5 text-white cursor-pointer hover:opacity-90 transition-opacity"
-                      style={{ background: HOST_COLORS[t.code] ?? '#1e3a5f' }}>
-                      <div className="flex items-center gap-3 mb-3">
-                        <FlagImg iso2={t.flag} name={t.name} size="md" />
-                        <span className="text-xs font-bold text-gray-300 uppercase tracking-wide">Host country</span>
-                      </div>
-                      <p className="text-xl font-black">{t.name}</p>
-                      <div className="mt-3 text-xs text-gray-300 space-y-1">
-                        <div className="flex justify-between">
-                          <span>Stage</span>
-                          <span className="font-semibold text-white">Group {t.group}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Confederation</span>
-                          <span className="font-semibold text-white">{t.confederation}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* Qualified teams */}
-          {qualified.length > 0 && (
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-3">Qualified teams</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {qualified.map(t => (
-                  <Link key={t.id} href={`/tournament/teams/${t.code}`}>
-                    <div className="rounded-xl p-4 text-white cursor-pointer hover:opacity-80 transition-opacity"
-                      style={{ background: '#111827' }}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <FlagImg iso2={t.flag} name={t.name} size="sm" />
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide truncate">{t.confederation}</span>
-                      </div>
-                      <p className="text-sm font-bold leading-tight">{t.name}</p>
-                      <div className="mt-2 text-[10px] text-gray-400">
-                        <div className="flex justify-between">
-                          <span>Stage</span>
-                          <span className="text-gray-200 font-semibold">Group {t.group}</span>
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Search teams…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="ml-auto border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:border-blue-400 w-full sm:w-44"
+        />
+      </div>
+
+      {/* Grid */}
+      <div className="bg-gray-50 px-4 py-6 rounded-b-xl">
+        {teams.length === 0 ? (
+          <div className="bg-white rounded-xl p-10 text-center text-gray-400">
+            <p className="text-4xl mb-3">⚽</p>
+            <p className="font-semibold">Team data loading…</p>
+            <p className="text-xs mt-1">Please try refreshing in a moment.</p>
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className="bg-white rounded-xl p-10 text-center text-gray-400">No teams match your search.</div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {sorted.map(t => {
+              const isHost = HOST_CODES.includes(t.code)
+              return (
+                <Link key={t.id} href={`/tournament/teams/${t.code}`}>
+                  <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group">
+                    {/* Flag image */}
+                    <div className="relative aspect-[3/2] overflow-hidden bg-gray-100">
+                      <FlagCard iso2={t.flag} name={t.name} />
+                      {/* Host badge overlay */}
+                      {isHost && (
+                        <div className="absolute top-2 right-2 px-1.5 py-0.5 text-[10px] font-bold text-white rounded"
+                          style={{ background: '#1e3a5f' }}>
+                          HOST
                         </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="px-3 py-3">
+                      <p className="text-sm font-bold text-gray-900 leading-tight truncate group-hover:text-blue-800 transition-colors">
+                        {t.name}
+                      </p>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className="inline-block px-2 py-0.5 text-[10px] font-semibold rounded"
+                          style={{ background: '#f3f4f6', color: '#374151' }}>
+                          Group {t.group}
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-medium">{t.confederation}</span>
                       </div>
                     </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

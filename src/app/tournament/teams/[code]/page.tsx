@@ -5,12 +5,13 @@ import FlagImg from '@/components/ui/FlagImg'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { toIso2 } from '@/lib/flags'
-import { fmtTime, fmtDate, CONFEDERATION } from '@/lib/fmt'
+import { fmtDate, CONFEDERATION } from '@/lib/fmt'
+import LocalTime from '@/components/ui/LocalTime'
 import { getSquadByPosition } from '@/lib/squads'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 // ─── Static team notes ──────────────────────────────────────────────────────
 
@@ -193,7 +194,7 @@ export default async function TeamDetailPage({ params }: Props) {
                             <FlagImg iso2={toIso2(m.awayTeam?.code ?? '')} name={m.awayTeam?.name ?? ''} size="sm" />
                           </div>
                           <p className="text-[10px] text-gray-400">
-                            {fmtDate(m.matchDate)} · {fmtTime(m.matchDate)}
+                            {fmtDate(m.matchDate)} · <LocalTime iso={m.matchDate.toString()} />
                             {m.venue ? ` · ${m.venue}` : ''}
                           </p>
                         </div>

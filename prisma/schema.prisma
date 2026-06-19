@@ -1,6 +1,8 @@
+// Local development schema — uses SQLite.
+// Vercel/production uses schema.postgres.prisma (copied over during build).
+
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x", "debian-openssl-1.1.x", "rhel-openssl-1.0.x"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -12,16 +14,16 @@ datasource db {
 
 model User {
   id            String    @id @default(cuid())
-  name          String                          // full real name (admin only)
+  name          String
   email         String    @unique
-  username      String?   @unique               // login username
-  nickname      String    @default("")          // public display name
-  league        String    @default("")          // league name string (sync with League.name)
-  leagueId      Int?                            // FK to League table
-  cheeringFrom  String    @default("")          // country/city (optional)
+  username      String?   @unique
+  nickname      String    @default("")
+  league        String    @default("")
+  leagueId      Int?
+  cheeringFrom  String    @default("")
   password      String
-  role          String    @default("player")    // "player" | "admin"
-  status        String    @default("pending")   // "pending" | "verified" | "approved" | "denied"
+  role          String    @default("player")
+  status        String    @default("pending")
   verifyToken   String?
   verifyExpiry  DateTime?
   createdAt     DateTime  @default(now())
@@ -51,7 +53,7 @@ model League {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   slug      String   @unique
-  color     String   @default("#1e3a5f")       // hex color for league card
+  color     String   @default("#1e3a5f")
   createdAt DateTime @default(now())
   users     User[]
 }
@@ -61,10 +63,10 @@ model League {
 model Team {
   id        Int    @id @default(autoincrement())
   name      String
-  code      String @unique  // 3-letter code e.g. "USA", "BRA"
-  flagCode  String @default("") // 2-letter ISO code e.g. "us", "br"
-  group     String          // "A"–"L" for WC2026
-  flag      String @default("")  // kept for backward compat
+  code      String @unique
+  flagCode  String @default("")
+  group     String
+  flag      String @default("")
 
   homeMatches Match[] @relation("HomeTeam")
   awayMatches Match[] @relation("AwayTeam")
@@ -74,15 +76,15 @@ model Match {
   id          Int       @id @default(autoincrement())
   homeTeamId  Int
   awayTeamId  Int
-  group       String    // "A"-"L" or "R32","R16","QF","SF","3rd","F"
-  stage       String    @default("group") // "group" | "knockout"
+  group       String
+  stage       String    @default("group")
   matchDate   DateTime
   venue       String    @default("")
   homeScore   Int?
   awayScore   Int?
-  status      String    @default("upcoming") // "upcoming" | "live" | "finished"
-  locked      Boolean   @default(false)       // predictions locked when true
-  externalId  String?   @unique               // ID from football-data.org API
+  status      String    @default("upcoming")
+  locked      Boolean   @default(false)
+  externalId  String?   @unique
 
   homeTeam    Team      @relation("HomeTeam", fields: [homeTeamId], references: [id])
   awayTeam    Team      @relation("AwayTeam", fields: [awayTeamId], references: [id])
@@ -96,8 +98,8 @@ model Prediction {
   matchId     Int
   homeScore   Int
   awayScore   Int
-  joker       Boolean  @default(false)   // ×2 multiplier
-  points      Int?                        // null until match finished & scored
+  joker       Boolean  @default(false)
+  points      Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -110,30 +112,30 @@ model Prediction {
 // ─── Bonus Questions ───────────────────────────────────────
 
 model BonusQuestion {
-  id           Int      @id @default(autoincrement())
-  question     String
-  type         String   @default("single")     // "single" | "multiple"
-  stage        String   @default("group")       // "group" | "knockout" | "final"
-  options      String   @default("[]")          // JSON array of option strings
-  correctAnswer String? @default("")            // set when answered
-  points       Int      @default(5)
-  status       String   @default("open")        // "open" | "closed" | "answered"
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  question      String
+  type          String   @default("single")
+  stage         String   @default("group")
+  options       String   @default("[]")
+  correctAnswer String?  @default("")
+  points        Int      @default(5)
+  status        String   @default("open")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  answers      BonusAnswer[]
+  answers       BonusAnswer[]
 }
 
 model BonusAnswer {
-  id           Int      @id @default(autoincrement())
-  userId       String
-  questionId   Int
-  answer       String
-  points       Int?
-  createdAt    DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  userId     String
+  questionId Int
+  answer     String
+  points     Int?
+  createdAt  DateTime @default(now())
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question     BonusQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question BonusQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, questionId])
 }
@@ -144,8 +146,8 @@ model Poll {
   id        Int      @id @default(autoincrement())
   matchId   Int?
   question  String
-  options   String   @default("[]")  // JSON: ["Home wins","Draw","Away wins"]
-  status    String   @default("open") // "open" | "closed"
+  options   String   @default("[]")
+  status    String   @default("open")
   createdAt DateTime @default(now())
 
   match     Match?     @relation(fields: [matchId], references: [id], onDelete: SetNull)
@@ -170,8 +172,8 @@ model PollVote {
 model AuditLog {
   id        Int      @id @default(autoincrement())
   userId    String
-  action    String   // "predict", "update_prediction", "login", "register", etc.
-  details   String   @default("") // JSON or human-readable info
+  action    String
+  details   String   @default("")
   ip        String   @default("")
   createdAt DateTime @default(now())
 
@@ -191,7 +193,7 @@ model ShoutboxMessage {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
-// ─── Site Settings ─────────────────────────────────────────
+// ─── Site Settings (key/value cache) ───────────────────────
 
 model Setting {
   key   String @id

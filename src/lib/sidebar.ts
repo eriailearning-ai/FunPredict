@@ -68,8 +68,13 @@ export async function getSidebarData(opts?: {
 
     prisma.match.findMany({
       where: {
-        status: { in: ['upcoming', 'live'] },
-        matchDate: { gte: new Date() },   // never show past matches
+        OR: [
+          { status: 'live' },  // always show live regardless of start time
+          {
+            status: 'upcoming',
+            matchDate: { gte: new Date() },  // upcoming = future only
+          },
+        ],
       },
       orderBy: { matchDate: 'asc' },
       take: 2,
@@ -167,7 +172,10 @@ export async function getSidebarData(opts?: {
     groupAStandings = GROUP_A_FALLBACK
   }
 
-  const topScorers: TopScorer[] = scorerSetting ? JSON.parse(scorerSetting.value) : []
+  let topScorers: TopScorer[] = []
+  if (scorerSetting?.value) {
+    try { topScorers = JSON.parse(scorerSetting.value) } catch {}
+  }
 
   return {
     topPerformers,

@@ -17,14 +17,15 @@ export const CONFEDERATION: Record<string, string> = {
   // AFC
   KOR: 'AFC', QAT: 'AFC', AUS: 'AFC', JPN: 'AFC',
   IRN: 'AFC', KSA: 'AFC', IRQ: 'AFC', UZB: 'AFC', JOR: 'AFC',
-  // UEFA
+  // UEFA (all 16)
   CZE: 'UEFA', BIH: 'UEFA', SCO: 'UEFA', TUR: 'UEFA',
   GER: 'UEFA', NED: 'UEFA', SWE: 'UEFA', BEL: 'UEFA',
-  ESP: 'UEFA', NOR: 'UEFA', ARG: 'CONMEBOL', AUT: 'UEFA',
+  ESP: 'UEFA', NOR: 'UEFA', AUT: 'UEFA',
   POR: 'UEFA', ENG: 'UEFA', CRO: 'UEFA', SUI: 'UEFA',
+  FRA: 'UEFA',
   // CONMEBOL
-  BRA: 'CONMEBOL', PRY: 'CONMEBOL', ECU: 'CONMEBOL', URY: 'CONMEBOL',
-  COL: 'CONMEBOL',
+  ARG: 'CONMEBOL', BRA: 'CONMEBOL', PRY: 'CONMEBOL', ECU: 'CONMEBOL',
+  URY: 'CONMEBOL', COL: 'CONMEBOL',
   // OFC
   NZL: 'OFC',
 }

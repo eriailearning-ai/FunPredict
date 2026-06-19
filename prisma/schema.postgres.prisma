@@ -5,8 +5,8 @@
 // All models are identical — only the datasource block differs.
 
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "rhel-openssl-1.0.x"]
 }
 
 datasource db {

@@ -8,11 +8,11 @@ import Link from 'next/link'
 import DiscussionsPollsClient from '@/components/ui/DiscussionsPollsClient'
 import ShoutboxClient from '@/components/ui/ShoutboxClient'
 
-export const revalidate = 30
+export const dynamic = 'force-dynamic'
 
 export default async function DiscussionsPage() {
   const [sidebarData, session] = await Promise.all([
-    getSidebarData(),
+    getSidebarData().catch(() => ({ topPerformers: [], nextMatch: null, comingUp: null, groupAStandings: [], topScorers: [] })),
     getSession().catch(() => null),
   ])
 

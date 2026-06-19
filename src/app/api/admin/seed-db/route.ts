@@ -135,46 +135,57 @@ function matchStatus(utcDate: string) {
 export async function POST() {
   await requireAdmin()
 
-  // 1. Upsert teams
+  // 1. Upsert ALL teams in parallel — sequential upserts time out before reaching groups I-L
+  const teamResults = await Promise.all(
+    TEAMS.map(([code, name, flagCode, group]) =>
+      prisma.team.upsert({
+        where:  { code },
+        create: { code, name, flagCode, group, flag: flagCode },
+        update: { name, flagCode, group, flag: flagCode },
+      })
+    )
+  )
   const teamMap: Record<string, number> = {}
-  for (const [code, name, flagCode, group] of TEAMS) {
-    const t = await prisma.team.upsert({
-      where:  { code },
-      create: { code, name, flagCode, group, flag: flagCode },
-      update: { name, flagCode, group, flag: flagCode },
-    })
-    teamMap[code] = t.id
-  }
+  for (const t of teamResults) teamMap[t.code] = t.id
 
-  // 2. Upsert matches
+  // 2. Fetch all existing matches in one query, then upsert in parallel
+  const existingMatches = await prisma.match.findMany({
+    select: { id: true, homeTeamId: true, awayTeamId: true },
+  })
+  const existingMap = new Map(
+    existingMatches.map(m => [`${m.homeTeamId}-${m.awayTeamId}`, m.id])
+  )
+
   let created = 0, updated = 0
 
-  for (const [homeCode, awayCode, utcDate, venue, group] of MATCHES) {
-    const homeTeamId = teamMap[homeCode]
-    const awayTeamId = teamMap[awayCode]
-    if (!homeTeamId || !awayTeamId) continue
+  await Promise.all(
+    MATCHES.map(async ([homeCode, awayCode, utcDate, venue, group]) => {
+      const homeTeamId = teamMap[homeCode]
+      const awayTeamId = teamMap[awayCode]
+      if (!homeTeamId || !awayTeamId) return
 
-    const key    = `${homeCode}-${awayCode}`
-    const scores = SCORES[key]
-    const status = scores ? 'finished' : matchStatus(utcDate)
-    const locked = scores ? true : new Date() >= new Date(new Date(utcDate).getTime() - 15 * 60 * 1000)
+      const key    = `${homeCode}-${awayCode}`
+      const scores = SCORES[key]
+      const status = scores ? 'finished' : matchStatus(utcDate)
+      const locked = scores ? true : new Date() >= new Date(new Date(utcDate).getTime() - 15 * 60 * 1000)
 
-    const data = {
-      homeTeamId, awayTeamId, group, stage: 'group',
-      matchDate: new Date(utcDate), venue, status, locked,
-      homeScore: scores?.h ?? null,
-      awayScore: scores?.a ?? null,
-    }
+      const data = {
+        homeTeamId, awayTeamId, group, stage: 'group',
+        matchDate: new Date(utcDate), venue, status, locked,
+        homeScore: scores?.h ?? null,
+        awayScore: scores?.a ?? null,
+      }
 
-    const existing = await prisma.match.findFirst({ where: { homeTeamId, awayTeamId } })
-    if (existing) {
-      await prisma.match.update({ where: { id: existing.id }, data })
-      updated++
-    } else {
-      await prisma.match.create({ data })
-      created++
-    }
-  }
+      const existingId = existingMap.get(`${homeTeamId}-${awayTeamId}`)
+      if (existingId) {
+        await prisma.match.update({ where: { id: existingId }, data })
+        updated++
+      } else {
+        await prisma.match.create({ data })
+        created++
+      }
+    })
+  )
 
   const counts = {
     upcoming: await prisma.match.count({ where: { status: 'upcoming' } }),

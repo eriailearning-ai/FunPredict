@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import FlagImg from '@/components/ui/FlagImg'
+import Navbar from '@/components/layout/Navbar'
+import SiteBanner from '@/components/ui/SiteBanner'
+import Footer from '@/components/layout/Footer'
 
 /* ─── Types ─────────────────────────────────────────────── */
 type Team = { id: number; name: string; code: string; flag: string }
@@ -36,19 +39,11 @@ type Props = {
   userTotalPoints: number; userRank: number
   topPerformers: Performer[]
   leagueScoreboards: LeagueBoard[]
-  groupAStandings: Array<{ flag: string; code: string; p: number; pts: number; gd: string }>
+  groupAStandings: Array<{ flag: string; name: string; p: number; pts: number; gd: string }>
   nextMatch: Match | null
   comingUp: Match | null
+  topScorers: Array<{ name: string; team: string; goals: number; assists: number }>
 }
-
-/* ─── Slideshow ─────────────────────────────────────────── */
-const SLIDES = [
-  { bg: '/images/banners/banner-02.png', label: 'FOOTBALL SEASON' },
-  { bg: '/images/banners/banner-05.png', label: 'GO · COMPETE · WIN' },
-  { bg: '/images/banners/banner-09.png', label: 'PREDICT EVERY MATCH' },
-  { bg: '/images/banners/banner-14.png', label: 'FIFA WORLD CUP 2026' },
-  { bg: '/images/banners/banner-20.png', label: 'FAMILY · FUN · FOOTBALL' },
-]
 
 /* ─── Poll colors ───────────────────────────────────────── */
 const POLL_COLORS = ['#3b82f6', '#f43f5e', '#22c55e', '#f59e0b']
@@ -85,15 +80,8 @@ export default function PredictionsClient({
   isLoggedIn, matches, predMap, userName, userRole, userNickname,
   userLeague, userTotalPoints: initPts, userRank: initRank,
   topPerformers: initTop, leagueScoreboards,
-  groupAStandings, nextMatch, comingUp,
+  groupAStandings, nextMatch, comingUp, topScorers,
 }: Props) {
-  /* Slideshow */
-  const [slide, setSlide] = useState(0)
-  useEffect(() => {
-    const t = setInterval(() => setSlide(s => (s + 1) % SLIDES.length), 5000)
-    return () => clearInterval(t)
-  }, [])
-
   /* Predictions state */
   const [preds, setPreds] = useState<Record<number, { h: string; a: string }>>(
     Object.fromEntries(matches.map(m => [m.id, {
@@ -240,76 +228,16 @@ export default function PredictionsClient({
   const dateKeys = Object.keys(byDate)
   const todayKey = fmtDate(new Date().toISOString())
 
-  /* Slideshow background */
-  const [imgErrs, setImgErrs] = useState<Record<number, boolean>>({})
-  const cur = SLIDES[slide]
-
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>
-      {/* NAVBAR */}
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 flex items-center gap-3 h-14">
-          <Link href="/" className="flex-shrink-0">
-            <img src="/images/logo/eagle-logo.png" alt="FIFAFun" className="h-10 w-auto" />
-          </Link>
-          <div className="hidden md:flex items-center gap-5 text-sm font-medium flex-1">
-            <Link href="/" className="text-gray-700 hover:text-red-700">FIFA World Cup 2026</Link>
-            <Link href="/standings" className="text-gray-700 hover:text-red-700">Standings</Link>
-            <Link href="/highlights" className="text-gray-700 hover:text-red-700">Highlights</Link>
-            <Link href="/predictions" className="font-bold border-b-2 border-blue-900" style={{ color: '#1e3a5f' }}>Go FIFAFun</Link>
-          </div>
-          <div className="flex items-center gap-2 text-sm ml-auto">
-            {isLoggedIn ? (
-              <>
-                <span className="hidden sm:inline text-gray-600 font-medium">{userNickname}</span>
-                <form action="/api/auth/logout" method="POST">
-                  <button className="text-xs text-gray-400 hover:text-red-600">Logout</button>
-                </form>
-                {userRole === 'admin' && (
-                  <Link href="/admin" className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-semibold">⚙ Admin</Link>
-                )}
-              </>
-            ) : (
-              <>
-                <Link href="/auth/login" className="text-gray-700 hover:text-blue-800 font-medium">Login</Link>
-                <span className="text-gray-300">|</span>
-                <Link href="/auth/register" className="text-gray-700 hover:text-blue-800 font-medium">Register</Link>
-              </>
-            )}
-          </div>
-        </div>
-      </nav>
+      {/* Shared navbar */}
+      <Navbar user={isLoggedIn ? { name: userName, nickname: userNickname, role: userRole } : null} />
 
-      {/* SLIDESHOW BANNER */}
-      <div className="relative overflow-hidden" style={{ height: 'clamp(160px,30vw,300px)' }}>
-        {!imgErrs[slide] && (
-          <img src={cur.bg} alt="" className="absolute inset-0 w-full h-full object-cover"
-            onError={() => setImgErrs(e => ({ ...e, [slide]: true }))} />
-        )}
-        <div className="absolute inset-0" style={{
-          background: imgErrs[slide]
-            ? 'linear-gradient(135deg,#0d1b3e,#8b1c2c)'
-            : 'linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5))',
-        }} />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4">
-          <p className="text-xs tracking-[0.3em] text-yellow-400 font-bold uppercase mb-2">Football Season</p>
-          <h2 className="text-lg sm:text-3xl font-black uppercase mb-4">GO · Compete · Win bragging rights</h2>
-          <div className="flex flex-wrap gap-2 justify-center">
-            <Link href={isLoggedIn ? '#predict' : '/auth/register'} className="px-4 py-2 rounded-lg font-semibold text-sm text-white" style={{ background: '#8b1c2c' }}>Let's GO</Link>
-            <Link href="/leaderboard" className="px-4 py-2 rounded-lg font-semibold text-sm text-white border border-white hover:bg-white hover:text-gray-900 transition-colors">Top Performers</Link>
-            {!isLoggedIn && <Link href="/auth/register" className="px-4 py-2 rounded-lg font-semibold text-sm text-white" style={{ background: '#1e3a5f' }}>Register free</Link>}
-          </div>
-        </div>
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-          {SLIDES.map((_, i) => (
-            <button key={i} onClick={() => setSlide(i)}
-              className={`h-2 rounded-full transition-all ${i === slide ? 'w-5 bg-yellow-400' : 'w-2 bg-white opacity-50'}`} />
-          ))}
-        </div>
-      </div>
+      {/* Shared banner — logo overlay included */}
+      <SiteBanner />
 
       {/* MAIN LAYOUT */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-5 flex flex-col lg:flex-row gap-5">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 flex flex-col lg:flex-row gap-6">
 
         {/* LEFT: Main content */}
         <div className="flex-1 min-w-0">
@@ -554,15 +482,6 @@ export default function PredictionsClient({
             </div>
           </div>
 
-          {/* Count Me In (guests) */}
-          {!isLoggedIn && (
-            <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
-              <p className="text-xs text-gray-600 text-center font-semibold">Count Me In!</p>
-              <Link href="/auth/register" className="block text-center py-2.5 rounded-lg text-white text-sm font-semibold" style={{ background: '#8b1c2c' }}>Register</Link>
-              <Link href="/auth/login" className="block text-center py-2.5 rounded-lg text-white text-sm font-semibold" style={{ background: '#1e3a5f' }}>Log in</Link>
-            </div>
-          )}
-
           {/* Next Match */}
           {nextMatch && (
             <div className="rounded-xl overflow-hidden" style={{ background: '#1e3a5f' }}>
@@ -581,11 +500,14 @@ export default function PredictionsClient({
             </div>
           )}
 
-          {/* Today's match */}
+          {/* Coming up match */}
           {comingUp && (
             <div className="rounded-xl overflow-hidden" style={{ background: '#1e3a5f' }}>
               <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-                <span className="text-white text-xs font-bold px-2 py-0.5 rounded" style={{ background: '#2563eb' }}>TODAY</span>
+                <span className="text-white text-xs font-bold px-2 py-0.5 rounded"
+                  style={{ background: new Date(comingUp.matchDate).toDateString() === new Date().toDateString() ? '#16a34a' : '#2563eb' }}>
+                  {new Date(comingUp.matchDate).toDateString() === new Date().toDateString() ? 'TODAY' : 'COMING UP'}
+                </span>
                 <span className="text-white text-xs font-bold tracking-widest uppercase">Football Match</span>
               </div>
               <div className="px-4 py-3">
@@ -643,8 +565,8 @@ export default function PredictionsClient({
                   <tr key={i} className="border-b border-gray-50 last:border-0">
                     <td className="px-3 py-1.5">
                       <div className="flex items-center gap-1.5">
-                        <FlagImg iso2={t.flag} name={t.code} size="sm" />
-                        <span className="text-xs text-gray-700">{t.code}</span>
+                        <FlagImg iso2={t.flag} name={t.name} size="sm" />
+                        <span className="text-xs text-gray-700">{t.name}</span>
                       </div>
                     </td>
                     <td className="px-2 py-1.5 text-center text-gray-600">{t.p}</td>
@@ -722,43 +644,32 @@ export default function PredictionsClient({
 
           {/* Top Goalscorers */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <p className="text-xs font-bold text-gray-700 uppercase tracking-widest">Top Goalscorers</p>
-              <p className="text-xs text-gray-400">Tournament goalscorers</p>
+            <div className="flex items-center justify-between px-4 py-3" style={{ background: '#1e3a5f' }}>
+              <span className="text-white text-xs font-bold tracking-widest uppercase">Top Goalscorers</span>
             </div>
-            <div className="px-4 py-3">
-              <p className="text-xs text-gray-400">No goal data yet — check back after matches are played.</p>
+            <div className="p-3">
+              {topScorers.length === 0 ? (
+                <p className="text-xs text-gray-400 p-1">No goal data yet — check back after matches are played.</p>
+              ) : topScorers.slice(0, 5).map((s, i) => (
+                <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-gray-800 truncate">{s.name}</div>
+                    <div className="text-xs text-gray-400">{s.team}</div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    <span className="text-xs font-black" style={{ color: '#dc2626' }}>{s.goals}</span>
+                    <span className="text-xs text-gray-300">⚽</span>
+                    {s.assists > 0 && <span className="text-xs text-gray-400">{s.assists}A</span>}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </aside>
       </div>
 
-      {/* FOOTER */}
-      <footer className="mt-8" style={{ background: '#111827' }}>
-        <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-2 sm:grid-cols-3 gap-6 text-sm text-gray-400">
-          <div>
-            <h4 className="text-white font-semibold mb-2 text-xs uppercase tracking-widest">Tournament</h4>
-            <div className="w-6 h-0.5 mb-3 bg-red-600" />
-            {['Full Schedule', 'Groups', 'Teams', 'Venues'].map(l => (
-              <Link key={l} href="/schedule" className="block hover:text-white text-xs mb-1">{l}</Link>
-            ))}
-          </div>
-          <div>
-            <h4 className="text-white font-semibold mb-2 text-xs uppercase tracking-widest">Community</h4>
-            <div className="w-6 h-0.5 mb-3 bg-red-600" />
-            {['Highlights', 'Audience Poll', 'Discussions', 'Home'].map(l => (
-              <Link key={l} href={l === 'Audience Poll' ? '/predictions' : '/'} className="block hover:text-white text-xs mb-1">{l}</Link>
-            ))}
-          </div>
-          <div>
-            <h4 className="text-white font-semibold mb-2 text-xs uppercase tracking-widest">Account</h4>
-            <div className="w-6 h-0.5 mb-3 bg-red-600" />
-            <Link href="/auth/login" className="block hover:text-white text-xs mb-1">Log in</Link>
-            <Link href="/auth/register" className="block hover:text-white text-xs mb-1">Register free</Link>
-          </div>
-        </div>
-        <div className="border-t border-gray-800 py-3 text-center text-xs text-gray-500">Copyright © 2026 WorldCup FIFAFun 2026</div>
-      </footer>
+      {/* Shared footer */}
+      <Footer />
     </div>
   )
 }

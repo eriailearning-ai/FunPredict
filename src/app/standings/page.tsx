@@ -2,19 +2,16 @@ import Navbar from '@/components/layout/Navbar'
 import Sidebar from '@/components/layout/Sidebar'
 import Footer from '@/components/layout/Footer'
 import SiteBanner from '@/components/ui/SiteBanner'
-import FlagImg from '@/components/ui/FlagImg'
+import StandingsTabs from '@/components/ui/StandingsTabs'
+import type { StandingGroup } from '@/components/ui/StandingsTabs'
 import { getSidebarData } from '@/lib/sidebar'
 import { getSession } from '@/lib/auth'
 import Link from 'next/link'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
-// FIFA World Cup 2026 — standings as of June 17, 2026
-// flag field = ISO 3166-1 alpha-2 code for FlagImg component
-const GROUPS: Array<{
-  group: string
-  teams: Array<{ flag: string; name: string; mp: number; w: number; d: number; l: number; gf: number; ga: number; gd: number; pts: number }>
-}> = [
+// FIFA World Cup 2026 — standings as of June 19, 2026
+const GROUPS: StandingGroup[] = [
   { group: 'A', teams: [
     { flag: 'mx', name: 'Mexico',       mp:1, w:1, d:0, l:0, gf:2, ga:0, gd: 2, pts:3 },
     { flag: 'kr', name: 'South Korea',  mp:1, w:1, d:0, l:0, gf:2, ga:1, gd: 1, pts:3 },
@@ -94,6 +91,7 @@ export default async function StandingsPage() {
   const isAdmin    = session?.role === 'admin' || session?.role === 'superplayer'
   const userLeague = (session as any)?.league ?? ''
   const sidebarData = await getSidebarData({ userLeague: session ? userLeague : '', isAdmin })
+    .catch(() => ({ topPerformers: [], nextMatch: null, comingUp: null, groupAStandings: [], topScorers: [] }))
 
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>
@@ -109,59 +107,10 @@ export default async function StandingsPage() {
 
         <div className="flex flex-col lg:flex-row gap-6">
           <main className="flex-1 min-w-0">
-            {/* Header */}
-            <div className="rounded-xl mb-6 p-6 sm:p-8 text-white" style={{ background: 'linear-gradient(135deg, #1e3a5f, #8b1c2c)' }}>
-              <h1 className="text-2xl sm:text-3xl font-bold text-yellow-400 mb-1">Standings</h1>
-              <p className="text-sm text-gray-300">Group standings with wins, draws, losses, goal difference, and points.</p>
-            </div>
-
-            {/* Groups grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {GROUPS.map(({ group, teams }) => (
-                <div key={group} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  <div className="px-4 py-3 text-white font-bold text-xs tracking-widest uppercase" style={{ background: '#1e3a5f' }}>
-                    Group {group}
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr style={{ background: '#111827' }}>
-                          <th className="px-3 py-2 text-left text-white font-medium">TEAM</th>
-                          {['P','W','D','L','GF','GA','GD','Pts'].map(h => (
-                            <th key={h} className={`px-1.5 py-2 text-center font-medium ${h === 'Pts' ? 'text-red-400' : 'text-gray-300'}`}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {teams.map((t, i) => (
-                          <tr key={t.name} className={`border-b border-gray-50 ${i % 2 === 1 ? 'bg-gray-50' : 'bg-white'} ${i < 2 ? 'font-medium' : ''}`}>
-                            <td className="px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-400 w-3">{i + 1}</span>
-                                <FlagImg iso2={t.flag} name={t.name} size="sm" />
-                                <span className="text-gray-800 whitespace-nowrap">{t.name}</span>
-                              </div>
-                            </td>
-                            <td className="px-1.5 py-2 text-center text-gray-600">{t.mp}</td>
-                            <td className="px-1.5 py-2 text-center text-gray-600">{t.w}</td>
-                            <td className="px-1.5 py-2 text-center text-gray-600">{t.d}</td>
-                            <td className="px-1.5 py-2 text-center text-gray-600">{t.l}</td>
-                            <td className="px-1.5 py-2 text-center text-gray-600">{t.gf}</td>
-                            <td className="px-1.5 py-2 text-center text-gray-600">{t.ga}</td>
-                            <td className="px-1.5 py-2 text-center text-gray-600">{t.gd >= 0 ? '+' : ''}{t.gd}</td>
-                            <td className="px-1.5 py-2 text-center font-bold" style={{ color: '#dc2626' }}>{t.pts}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <p className="text-center text-xs text-gray-400 mt-6">
-              Standings updated June 17, 2026 · Groups K &amp; L kick off today ·{' '}
-              <a href="https://www.cbssports.com/soccer/world-cup/standings/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">Source: CBS Sports</a>
+            <StandingsTabs groups={GROUPS} />
+            <p className="text-xs text-gray-400 mt-4 text-center">
+              Updated June 19, 2026 ·{' '}
+              <a href="https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/standings" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">Source: FIFA.com</a>
             </p>
           </main>
 

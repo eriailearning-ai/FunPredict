@@ -1,6 +1,7 @@
 import Navbar from '@/components/layout/Navbar'
 import Sidebar from '@/components/layout/Sidebar'
 import Footer from '@/components/layout/Footer'
+import SiteBanner from '@/components/ui/SiteBanner'
 import { getSidebarData } from '@/lib/sidebar'
 import { getSession } from '@/lib/auth'
 import Link from 'next/link'
@@ -11,6 +12,7 @@ export default async function DisclaimerPage() {
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>
       <Navbar user={session ? { name: session.name, nickname: (session as any).nickname, role: session.role } : null} />
+      <SiteBanner />
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6">
         <nav className="text-xs text-gray-400 mb-4">
           <Link href="/" className="hover:underline">Home</Link>

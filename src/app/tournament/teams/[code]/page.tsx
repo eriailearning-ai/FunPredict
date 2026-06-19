@@ -1,9 +1,11 @@
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
+import SiteBanner from '@/components/ui/SiteBanner'
 import FlagImg from '@/components/ui/FlagImg'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { CODE3_TO_ISO2 } from '@/lib/flags'
+import { toIso2 } from '@/lib/flags'
+import { fmtTime, fmtDate, CONFEDERATION } from '@/lib/fmt'
 import { getSquadByPosition } from '@/lib/squads'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -24,21 +26,6 @@ const TEAM_NOTES: Record<string, { note: string; star?: string }> = {
   GER: { note: 'Traditional powerhouse. Host in spirit.', star: 'Florian Wirtz' },
   POR: { note: 'Generational talent ready to shine.', star: 'Cristiano Ronaldo' },
   NED: { note: 'Total football legacy.', star: 'Virgil van Dijk' },
-}
-
-const CONFEDERATION: Record<string, string> = {
-  MEX:'CONCACAF', ZAF:'CAF',   KOR:'AFC',     CZE:'UEFA',
-  CAN:'CONCACAF', BIH:'UEFA',  QAT:'AFC',     SUI:'UEFA',
-  HTI:'CONCACAF', SCO:'UEFA',  BRA:'CONMEBOL',MAR:'CAF',
-  USA:'CONCACAF', PRY:'CONMEBOL',AUS:'AFC',   TUR:'UEFA',
-  GER:'UEFA',     CUW:'CONCACAF',CIV:'CAF',   ECU:'CONMEBOL',
-  NED:'UEFA',     JPN:'AFC',   SWE:'UEFA',    TUN:'CAF',
-  IRN:'AFC',      NZL:'OFC',   BEL:'UEFA',    EGY:'CAF',
-  KSA:'AFC',      URY:'CONMEBOL',ESP:'UEFA',  CPV:'CAF',
-  FRA:'UEFA',     SEN:'CAF',   IRQ:'AFC',     NOR:'UEFA',
-  ARG:'CONMEBOL', ALG:'CAF',   AUT:'UEFA',    JOR:'AFC',
-  POR:'UEFA',     COD:'CAF',   UZB:'AFC',     COL:'CONMEBOL',
-  GHA:'CAF',      PAN:'CONCACAF',ENG:'UEFA',  CRO:'UEFA',
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -65,23 +52,16 @@ export default async function TeamDetailPage({ params }: Props) {
 
   if (!team) notFound()
 
-  const iso2   = CODE3_TO_ISO2[code] ?? code.toLowerCase().slice(0, 2)
-  const squad  = getSquadByPosition(code)
-  const confed = CONFEDERATION[code] ?? '—'
-  const notes  = TEAM_NOTES[code] ?? {}
+  const iso2     = toIso2(code)
+  const squad    = getSquadByPosition(code)
+  const confed   = CONFEDERATION[code] ?? '—'
+  const notes    = TEAM_NOTES[code] ?? {}
   const teamSlug = team.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-
-  function fmtDate(d: string | Date) {
-    return new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  }
-  function fmtTime(d: string | Date) {
-    return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-  }
-  function isoFlag(c: string) { return CODE3_TO_ISO2[c?.toUpperCase()] ?? c?.toLowerCase()?.slice(0, 2) ?? '' }
 
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>
       <Navbar user={session ? { name: session.name, nickname: (session as any).nickname, role: session.role } : null} />
+      <SiteBanner />
 
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6">
 
@@ -204,13 +184,13 @@ export default async function TeamDetailPage({ params }: Props) {
                       <div key={m.id} className="flex items-center gap-2 text-xs border-b border-gray-50 pb-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-0.5">
-                            <FlagImg iso2={isoFlag(m.homeTeam?.code ?? '')} name={m.homeTeam?.name ?? ''} size="sm" />
+                            <FlagImg iso2={toIso2(m.homeTeam?.code ?? '')} name={m.homeTeam?.name ?? ''} size="sm" />
                             <span className="text-gray-700 font-medium truncate">{m.homeTeam?.name}</span>
                             <span className="text-gray-400 font-bold mx-0.5">
                               {m.status === 'finished' ? `${m.homeScore}–${m.awayScore}` : 'vs'}
                             </span>
                             <span className="text-gray-700 font-medium truncate">{m.awayTeam?.name}</span>
-                            <FlagImg iso2={isoFlag(m.awayTeam?.code ?? '')} name={m.awayTeam?.name ?? ''} size="sm" />
+                            <FlagImg iso2={toIso2(m.awayTeam?.code ?? '')} name={m.awayTeam?.name ?? ''} size="sm" />
                           </div>
                           <p className="text-[10px] text-gray-400">
                             {fmtDate(m.matchDate)} · {fmtTime(m.matchDate)}

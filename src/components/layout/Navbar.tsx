@@ -28,16 +28,6 @@ export default function Navbar({ user }: Props) {
     <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-3 sm:px-4">
         <div className="flex items-center h-16 gap-2">
-          {/* Logo */}
-          <Link href="/" className="flex-shrink-0 flex items-center gap-2 mr-2">
-            <img
-              src="/images/logo/cropped-worldcup-eagle-logo-1.png"
-              alt="WorldCup FIFAFun 2026"
-              className="h-12 w-auto"
-              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-            />
-          </Link>
-
           {/* Desktop nav */}
           <div className="hidden lg:flex items-center gap-1 flex-1 text-sm font-medium">
             {/* FIFA World Cup 2026 dropdown */}

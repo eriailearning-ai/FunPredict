@@ -92,6 +92,14 @@ export function flagCdnUrl(iso2: string, size: '20x15' | '24x18' | '40x30' | '48
   return `https://flagcdn.com/${size}/${iso2.toLowerCase()}.png`
 }
 
+/**
+ * Convert a 3-letter DB team code to an ISO 3166-1 alpha-2 code.
+ * Use this instead of re-implementing the lookup in every page.
+ */
+export function toIso2(code3: string): string {
+  return CODE3_TO_ISO2[code3?.toUpperCase()] ?? code3?.toLowerCase()?.slice(0, 2) ?? ''
+}
+
 /** FlagImage component props helper — returns src + onError fallback src */
 export function flagSources(iso2: string) {
   return {

@@ -18,6 +18,7 @@ const PUBLIC_PATHS = [
   '/api/auth/login', '/api/auth/register', '/api/auth/verify',
   '/api/admin/quick-action',          // one-click approve/deny from email (token-secured)
   '/api/debug', '/api/sync-scores', '/api/polls', '/api/scores', '/api/bonus',
+  '/api/tournament',                               // public schedule/teams/matches data
   // Dev helpers
   '/test',
   // Images, flags etc are handled by static matcher below

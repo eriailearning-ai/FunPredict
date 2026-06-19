@@ -6,6 +6,10 @@
     {
       "path": "/api/sync-scores",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/sync-scorers",
+      "schedule": "0 3 * * *"
     }
   ]
 }

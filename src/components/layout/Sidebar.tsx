@@ -83,11 +83,14 @@ export default function Sidebar({ topPerformers, nextMatch, comingUp, groupAStan
         </div>
       )}
 
-      {/* ── NEXT FOOTBALL MATCH card (big box with day + time) — uses nextMatch ── */}
+      {/* ── TODAY'S / NEXT FOOTBALL MATCH card (big box with day + time) — uses nextMatch ── */}
       {nextMatch && (
         <div className="rounded-xl overflow-hidden" style={{ background: '#1e3a5f' }}>
           <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-            <span className="text-white text-xs font-bold px-2 py-0.5 rounded" style={{ background: '#2563eb' }}>NEXT</span>
+            <span className="text-white text-xs font-bold px-2 py-0.5 rounded"
+              style={{ background: nextMatch.isToday ? '#16a34a' : '#2563eb' }}>
+              {nextMatch.isToday ? 'TODAY' : 'NEXT'}
+            </span>
             <span className="text-white text-xs font-bold tracking-widest uppercase">Football Match</span>
           </div>
           <div className="px-4 py-3">

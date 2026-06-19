@@ -44,7 +44,7 @@ export default function TournamentPage() {
   const [session, setSession] = useState<any>(null)
 
   useEffect(() => {
-    fetch('/api/admin/matches').then(r => r.json()).then(data => {
+    fetch('/api/tournament/matches').then(r => r.json()).then(data => {
       if (Array.isArray(data)) setMatches(data.sort((a:any,b:any) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()))
     }).catch(() => {})
   }, [])
@@ -71,23 +71,44 @@ export default function TournamentPage() {
         <div className="flex flex-col lg:flex-row gap-6">
           <main className="flex-1 min-w-0 space-y-4">
 
-            {/* Header */}
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Matches</h1>
-              <p className="text-sm text-gray-500 mt-1">Full World Cup 2026 schedule grouped by day. Tap Match to predict or view stats.</p>
+            {/* Dark gradient header card — matches eagledrop.net style */}
+            <div
+              className="rounded-xl px-6 py-5"
+              style={{ background: 'linear-gradient(135deg,#0d1b3e 0%,#1e3a5f 50%,#8b1c2c 100%)' }}
+            >
+              <h1 className="text-2xl font-black text-yellow-400 mb-1">Matches</h1>
+              <p className="text-sm text-gray-300">Full World Cup 2026 schedule grouped by day. Tap Match to predict or view stats.</p>
             </div>
 
-            {/* Tab links */}
-            <div className="flex gap-3 border-b border-gray-200">
-              <Link href="/schedule" className="text-sm text-blue-600 hover:underline pb-2">Matches</Link>
+            {/* Tab bar */}
+            <div className="rounded-lg overflow-hidden flex" style={{ background: '#111827' }}>
+              <span className="px-4 py-2.5 text-xs font-bold text-white tracking-widest uppercase border-b-2 border-yellow-400">
+                MATCHES
+              </span>
+            </div>
+
+            {/* BY DAY / FULL BRACKET toggle */}
+            <div className="flex rounded-lg overflow-hidden border border-gray-200">
               <button
                 onClick={() => setTab('byday')}
-                className={`text-sm pb-2 border-b-2 transition-colors ${tab === 'byday' ? 'border-blue-600 text-blue-700 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-              >By day</button>
+                className="flex-1 py-3 text-sm font-bold tracking-wide transition-colors"
+                style={{
+                  background: tab === 'byday' ? '#1e3a5f' : '#f3f4f6',
+                  color: tab === 'byday' ? '#fff' : '#374151',
+                }}
+              >
+                BY DAY
+              </button>
               <button
                 onClick={() => setTab('bracket')}
-                className={`text-sm pb-2 border-b-2 transition-colors ${tab === 'bracket' ? 'border-blue-600 text-blue-700 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-              >Full bracket</button>
+                className="flex-1 py-3 text-sm font-bold tracking-wide transition-colors border-l border-gray-200"
+                style={{
+                  background: tab === 'bracket' ? '#1e3a5f' : '#f3f4f6',
+                  color: tab === 'bracket' ? '#fff' : '#374151',
+                }}
+              >
+                FULL BRACKET
+              </button>
             </div>
 
             {/* ── BY DAY tab ── */}
@@ -102,24 +123,24 @@ export default function TournamentPage() {
                 {Object.entries(byDate).map(([dateStr, dayMatches]) => (
                   <div key={dateStr}>
                     <div className="flex items-center justify-between mb-2">
-                      <h2 className="text-base font-bold text-gray-800 uppercase tracking-wide">{dateStr}</h2>
-                      <Link href="/tournament/groups" className="text-xs text-blue-600 hover:underline">View groups</Link>
+                      <h2 className="text-lg font-black text-gray-900">{dateStr}</h2>
+                      <Link href="/tournament/groups" className="text-xs font-semibold hover:underline" style={{ color: '#8b1c2c' }}>View groups</Link>
                     </div>
                     <div className="space-y-2">
                       {dayMatches.map((m: any) => (
-                        <div key={m.id} className="bg-white rounded-xl shadow-sm px-4 py-3">
-                          <div className="flex items-center gap-2">
+                        <div key={m.id} className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3">
+                          <div className="flex items-center gap-3">
                             {/* Home team */}
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               <FlagImg iso2={isoFlag(m.homeTeam?.code ?? '')} name={m.homeTeam?.name ?? ''} size="md" />
                               <span className="text-sm font-semibold text-gray-800 truncate">{m.homeTeam?.name}</span>
                             </div>
                             {/* Score or time */}
-                            <div className="text-center flex-shrink-0 w-16">
+                            <div className="text-center flex-shrink-0 w-20">
                               {m.status === 'finished' ? (
                                 <span className="text-base font-black text-gray-900">{m.homeScore}–{m.awayScore}</span>
                               ) : (
-                                <span className="text-sm font-bold text-gray-500">{fmtTime(m.matchDate)}</span>
+                                <span className="text-sm font-bold" style={{ color: '#1e3a5f' }}>{fmtTime(m.matchDate)}</span>
                               )}
                             </div>
                             {/* Away team */}
@@ -141,66 +162,122 @@ export default function TournamentPage() {
 
             {/* ── FULL BRACKET tab ── */}
             {tab === 'bracket' && (
-              <div className="space-y-8">
-                {/* Group stage summary */}
-                <div>
-                  <h2 className="text-lg font-bold text-gray-800 mb-3">Group Stage</h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {GROUPS.map(g => {
-                      const gMatches = matches.filter((m:any) => m.stage === 'group' && m.group === g)
+              <div className="space-y-6">
+                {/* Hero bracket banner */}
+                <div
+                  className="rounded-xl p-5 text-center text-white"
+                  style={{ background: 'linear-gradient(135deg,#0d1b3e,#8b1c2c)' }}
+                >
+                  <div className="text-2xl mb-1">🏆</div>
+                  <p className="text-xs font-bold tracking-widest text-gray-300 mb-0.5">FIFA</p>
+                  <h2 className="text-lg font-black">2026 WORLD CUP MATCH SCHEDULE</h2>
+                  <p className="text-xs text-gray-400 mt-1">Group stage · Knockout rounds · All times in your local timezone</p>
+                </div>
+
+                {/* Group stage grid — A-F left, G-L right with knockout TIE-SHEET in centre */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Left column: Groups A–F */}
+                  <div className="space-y-3">
+                    {GROUPS.slice(0, 6).map(g => {
+                      const gm = matches.filter((m:any) => m.stage === 'group' && m.group === g)
                       return (
-                        <div key={g} className="bg-white rounded-xl shadow-sm p-3">
-                          <p className="text-xs font-bold text-white rounded px-2 py-0.5 mb-2 inline-block" style={{ background: '#1e3a5f' }}>Group {g}</p>
-                          {gMatches.slice(0,3).map((m:any) => (
-                            <div key={m.id} className="flex items-center gap-1 text-xs text-gray-600 py-0.5">
-                              <FlagImg iso2={isoFlag(m.homeTeam?.code ?? '')} name="" size="sm" />
-                              <span className="font-medium">{m.status === 'finished' ? `${m.homeScore}–${m.awayScore}` : 'vs'}</span>
-                              <FlagImg iso2={isoFlag(m.awayTeam?.code ?? '')} name="" size="sm" />
-                            </div>
-                          ))}
-                          {gMatches.length === 0 && <p className="text-xs text-gray-400">–</p>}
+                        <div key={g} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                          <div className="px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wide" style={{ background: '#111827' }}>
+                            Group {g}
+                          </div>
+                          <div className="p-3 space-y-1.5">
+                            {gm.length === 0
+                              ? <p className="text-xs text-gray-400">–</p>
+                              : gm.map((m:any) => (
+                                <div key={m.id} className="flex items-center gap-1.5 text-xs">
+                                  <FlagImg iso2={isoFlag(m.homeTeam?.code ?? '')} name={m.homeTeam?.name ?? ''} size="sm" />
+                                  <span className="flex-1 text-gray-700 truncate">{m.homeTeam?.name}</span>
+                                  {m.status === 'finished'
+                                    ? <span className="font-black text-gray-900 w-10 text-center">{m.homeScore}–{m.awayScore}</span>
+                                    : <span className="text-gray-400 w-10 text-center">{fmtTime(m.matchDate)}</span>}
+                                  <span className="flex-1 text-gray-700 truncate text-right">{m.awayTeam?.name}</span>
+                                  <FlagImg iso2={isoFlag(m.awayTeam?.code ?? '')} name={m.awayTeam?.name ?? ''} size="sm" />
+                                </div>
+                              ))
+                            }
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Centre: Knockout bracket */}
+                  <div className="space-y-3">
+                    <div
+                      className="rounded-xl p-4 text-white text-center"
+                      style={{ background: 'linear-gradient(180deg,#1e3a5f,#0d1b3e)' }}
+                    >
+                      <p className="text-xs tracking-widest text-gray-300">USA · MEX · CAN 2026</p>
+                      <p className="text-sm font-bold mt-0.5">KNOCKOUT TIE-SHEET</p>
+                    </div>
+
+                    {['R32','R16','QF','SF','3rd','F'].map(round => {
+                      const roundMatches = matches.filter((m:any) => m.stage === 'knockout' && m.group === round)
+                      const labels: Record<string,string> = { R32:'Round of 32', R16:'Round of 16', QF:'Quarter-finals', SF:'Semi-finals', '3rd':'3rd Place', F:'Final' }
+                      if (roundMatches.length === 0) {
+                        return (
+                          <div key={round} className="bg-white rounded-xl shadow-sm p-3 border border-gray-100">
+                            <p className="text-xs font-bold text-white rounded px-2 py-0.5 mb-2 inline-block" style={{ background: '#8b1c2c' }}>{labels[round]}</p>
+                            <p className="text-xs text-gray-400">Bracket seeding pending</p>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div key={round} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                          <div className="px-3 py-1.5 text-xs font-bold text-white" style={{ background: '#8b1c2c' }}>{labels[round]}</div>
+                          <div className="p-3 space-y-2">
+                            {roundMatches.map((m:any) => (
+                              <div key={m.id} className="flex items-center gap-1.5 text-xs">
+                                <FlagImg iso2={isoFlag(m.homeTeam?.code ?? '')} name={m.homeTeam?.name ?? 'TBD'} size="sm" />
+                                <span className="flex-1 text-gray-700 truncate">{m.homeTeam?.name ?? 'TBD'}</span>
+                                {m.status === 'finished'
+                                  ? <span className="font-black text-gray-900 w-10 text-center">{m.homeScore}–{m.awayScore}</span>
+                                  : <span className="text-gray-400 w-10 text-center">{fmtTime(m.matchDate)}</span>}
+                                <span className="flex-1 text-gray-700 truncate text-right">{m.awayTeam?.name ?? 'TBD'}</span>
+                                <FlagImg iso2={isoFlag(m.awayTeam?.code ?? '')} name={m.awayTeam?.name ?? 'TBD'} size="sm" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Right column: Groups G–L */}
+                  <div className="space-y-3">
+                    {GROUPS.slice(6).map(g => {
+                      const gm = matches.filter((m:any) => m.stage === 'group' && m.group === g)
+                      return (
+                        <div key={g} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                          <div className="px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wide" style={{ background: '#111827' }}>
+                            Group {g}
+                          </div>
+                          <div className="p-3 space-y-1.5">
+                            {gm.length === 0
+                              ? <p className="text-xs text-gray-400">–</p>
+                              : gm.map((m:any) => (
+                                <div key={m.id} className="flex items-center gap-1.5 text-xs">
+                                  <FlagImg iso2={isoFlag(m.homeTeam?.code ?? '')} name={m.homeTeam?.name ?? ''} size="sm" />
+                                  <span className="flex-1 text-gray-700 truncate">{m.homeTeam?.name}</span>
+                                  {m.status === 'finished'
+                                    ? <span className="font-black text-gray-900 w-10 text-center">{m.homeScore}–{m.awayScore}</span>
+                                    : <span className="text-gray-400 w-10 text-center">{fmtTime(m.matchDate)}</span>}
+                                  <span className="flex-1 text-gray-700 truncate text-right">{m.awayTeam?.name}</span>
+                                  <FlagImg iso2={isoFlag(m.awayTeam?.code ?? '')} name={m.awayTeam?.name ?? ''} size="sm" />
+                                </div>
+                              ))
+                            }
+                          </div>
                         </div>
                       )
                     })}
                   </div>
                 </div>
-
-                {/* Knockout rounds */}
-                {['R32','R16','QF','SF','F'].map(round => {
-                  const roundMatches = matches.filter((m:any) => m.stage === 'knockout' && m.group === round)
-                  if (roundMatches.length === 0) return null
-                  const labels: Record<string,string> = { R32:'Round of 32', R16:'Round of 16', QF:'Quarter-finals', SF:'Semi-finals', F:'Final' }
-                  return (
-                    <div key={round}>
-                      <h2 className="text-lg font-bold text-gray-800 mb-3">{labels[round]}</h2>
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        {roundMatches.map((m:any) => (
-                          <div key={m.id} className="bg-white rounded-xl shadow-sm px-4 py-3 flex items-center gap-3">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <FlagImg iso2={isoFlag(m.homeTeam?.code ?? '')} name={m.homeTeam?.name ?? ''} size="md" />
-                              <span className="text-sm font-semibold text-gray-800 truncate">{m.homeTeam?.name ?? 'TBD'}</span>
-                            </div>
-                            <div className="text-center flex-shrink-0 w-14">
-                              {m.status === 'finished'
-                                ? <span className="text-base font-black">{m.homeScore}–{m.awayScore}</span>
-                                : <span className="text-xs text-gray-400">{fmtTime(m.matchDate)}</span>}
-                            </div>
-                            <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                              <span className="text-sm font-semibold text-gray-800 truncate text-right">{m.awayTeam?.name ?? 'TBD'}</span>
-                              <FlagImg iso2={isoFlag(m.awayTeam?.code ?? '')} name={m.awayTeam?.name ?? ''} size="md" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })}
-
-                {matches.filter((m:any) => m.stage === 'knockout').length === 0 && (
-                  <div className="bg-white rounded-xl p-8 text-center text-gray-400">
-                    <p>🏆 Knockout bracket available after group stage.</p>
-                  </div>
-                )}
               </div>
             )}
           </main>

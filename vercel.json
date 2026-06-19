@@ -1,11 +1,11 @@
 {
-  "buildCommand": "cp prisma/schema.postgres.prisma prisma/schema.prisma && npx prisma generate && npx prisma db push && next build",
+  "buildCommand": "cp prisma/schema.postgres.prisma prisma/schema.prisma && npx prisma generate && npx prisma db push --accept-data-loss || true && next build",
   "framework": "nextjs",
   "regions": ["iad1"],
   "crons": [
     {
       "path": "/api/sync-scores",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 2 * * *"
     }
   ]
 }

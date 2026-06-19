@@ -198,7 +198,7 @@ model ShoutboxMessage {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
-// ─── Site Settings ─────────────────────────────────────────
+// ─── Site Settings (key/value cache) ───────────────────────
 
 model Setting {
   key   String @id

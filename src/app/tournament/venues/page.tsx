@@ -57,18 +57,13 @@ export default async function VenuesPage() {
             <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {VENUES.map(v => (
                 <div key={v.name} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow border border-gray-100">
-                  {/* Venue photo */}
-                  <div className="h-40 relative overflow-hidden bg-gray-200">
+                  {/* Venue photo — gradient+emoji fallback sits behind the image */}
+                  <div className="h-40 relative overflow-hidden" style={{ background: 'linear-gradient(135deg,#0d1b3e,#1e3a5f)' }}>
+                    <div className="absolute inset-0 flex items-center justify-center text-4xl">🏟️</div>
                     <img
                       src={`/images/venues/${v.img}.jpg`}
                       alt={v.name}
-                      className="w-full h-full object-cover"
-                      onError={e => {
-                        const el = e.target as HTMLImageElement
-                        el.style.display = 'none'
-                        el.parentElement!.style.background = 'linear-gradient(135deg,#0d1b3e,#1e3a5f)'
-                        el.parentElement!.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:white;font-size:2rem">🏟️</div>'
-                      }}
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                   </div>
                   <div className="p-4">

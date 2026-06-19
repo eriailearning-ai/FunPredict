@@ -83,9 +83,12 @@ export default function Navbar({ user }: Props) {
           <div className="hidden lg:flex items-center gap-2 text-sm ml-auto">
             {user ? (
               <>
-                <span className="text-gray-600 font-medium">{displayName}</span>
-                {user.role === 'admin' && (
+                <span className="text-gray-600 font-medium text-xs">{displayName}</span>
+                {(user.role === 'admin') && (
                   <Link href="/admin" className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded font-semibold">⚙ Admin</Link>
+                )}
+                {user.role === 'superplayer' && (
+                  <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded font-semibold">⭐ SuperPlayer</span>
                 )}
                 <button onClick={logout} className="px-3 py-1.5 text-xs text-gray-500 hover:text-red-600 border border-gray-200 rounded-md">
                   Logout
@@ -95,7 +98,7 @@ export default function Navbar({ user }: Props) {
               <>
                 <Link href="/auth/login" className="px-3 py-1.5 text-sm text-gray-700 hover:text-blue-900 font-medium">Login</Link>
                 <span className="text-gray-300">|</span>
-                <Link href="/auth/register" className="px-3 py-1.5 text-sm text-gray-700 hover:text-blue-900 font-medium">Register</Link>
+                <Link href="/auth/register" className="px-4 py-1.5 text-sm font-semibold text-white rounded-lg" style={{ background: '#8b1c2c' }}>Register</Link>
               </>
             )}
           </div>

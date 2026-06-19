@@ -31,17 +31,17 @@ export default async function PredictionsPage() {
     }))
     .sort((a, b) => b.total - a.total)
 
-  // Players see only their own league; admins + superplayers see all
-  const isPlayer = isApproved && !seeAll
-  const topPerformers = isPlayer
-    ? fullBoard.filter(p => p.league === userLeague)
-    : fullBoard
+  // Admin/superplayer see all leagues; regular players see only their own
+  // But everyone (including admin) is treated as a participant who can make predictions
+  const topPerformers = (seeAll || !userLeague)
+    ? fullBoard
+    : fullBoard.filter(p => p.league === userLeague)
 
-  // Scoreboard tab: admins/superplayers see all leagues, players see only their own
-  const visibleLeagues = seeAll ? LEAGUES : (isPlayer ? [userLeague] : LEAGUES)
+  // Scoreboard: admins/superplayers see all leagues; players see their own
+  const visibleLeagues = (seeAll || !userLeague) ? LEAGUES : [userLeague]
   const leagueScoreboards = visibleLeagues.map(league => ({
     league,
-    players: (isAdmin ? fullBoard : topPerformers)
+    players: fullBoard
       .filter(p => p.league === league)
       .map((p, i) => ({ ...p, rank: i + 1 })),
   }))

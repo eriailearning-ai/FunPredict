@@ -88,10 +88,9 @@ const GROUPS: Array<{
 
 export default async function StandingsPage() {
   const session = await getSession().catch(() => null)
-  const isAdmin    = session?.role === 'admin'
-  const isPlayer   = !!session && !isAdmin
+  const isAdmin    = session?.role === 'admin' || session?.role === 'superplayer'
   const userLeague = (session as any)?.league ?? ''
-  const sidebarData = await getSidebarData({ userLeague: isPlayer ? userLeague : '', isAdmin })
+  const sidebarData = await getSidebarData({ userLeague: session ? userLeague : '', isAdmin })
 
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>

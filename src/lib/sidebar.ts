@@ -20,6 +20,7 @@ export type SidebarMatch = {
   matchDate: string
   group: string
   status: string
+  isToday?: boolean
 }
 
 export type SidebarStanding = {
@@ -114,14 +115,19 @@ export async function getSidebarData(opts?: {
     topPerformers = fullBoard
   }
 
-  const toSidebarMatch = (m: any): SidebarMatch => ({
-    id: m.id,
-    homeTeam: { name: m.homeTeam.name, code: m.homeTeam.code, flag: isoFlag(m.homeTeam.code) },
-    awayTeam: { name: m.awayTeam.name, code: m.awayTeam.code, flag: isoFlag(m.awayTeam.code) },
-    matchDate: m.matchDate.toISOString(),
-    group: m.group,
-    status: m.status,
-  })
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const toSidebarMatch = (m: any): SidebarMatch => {
+    const matchDay = new Date(m.matchDate).toISOString().slice(0, 10)
+    return {
+      id: m.id,
+      homeTeam: { name: m.homeTeam.name, code: m.homeTeam.code, flag: isoFlag(m.homeTeam.code) },
+      awayTeam: { name: m.awayTeam.name, code: m.awayTeam.code, flag: isoFlag(m.awayTeam.code) },
+      matchDate: m.matchDate.toISOString(),
+      group: m.group,
+      status: m.status,
+      isToday: matchDay === todayStr,
+    }
+  }
 
   // Compute Group A standings from finished matches in DB
   let groupAStandings: SidebarStanding[]

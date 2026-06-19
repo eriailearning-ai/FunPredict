@@ -16,11 +16,11 @@ export default async function LeaderboardPage() {
   const isAdmin       = session?.role === 'admin'
   const isSuperPlayer = session?.role === 'superplayer'
   const seeAll        = isAdmin || isSuperPlayer
-  const isPlayer      = !!session && !seeAll
+  const isLoggedIn    = !!session
   const userLeague    = (session as any)?.league ?? ''
 
   const sidebarData = await getSidebarData({
-    userLeague: isPlayer ? userLeague : '',
+    userLeague: isLoggedIn ? userLeague : '',
     isAdmin,
   })
 
@@ -44,9 +44,9 @@ export default async function LeaderboardPage() {
     exact:        u.predictions.filter(p => p.points === 5).length,
   })).sort((a, b) => b.total - a.total || a.display.localeCompare(b.display))
 
-  // Players see only their own league; admins + superplayers + guests see all
-  const board = isPlayer ? fullBoard.filter(p => p.league === userLeague) : fullBoard
-  const visibleLeagues = seeAll ? LEAGUES : isPlayer ? [userLeague] : LEAGUES
+  // Admin/superplayer see all leagues; logged-in player sees own league; guest sees all (with teaser)
+  const board = (!seeAll && isLoggedIn && userLeague) ? fullBoard.filter(p => p.league === userLeague) : fullBoard
+  const visibleLeagues = seeAll ? LEAGUES : (isLoggedIn && userLeague) ? [userLeague] : LEAGUES
 
   const currentUserId = session?.id
 
@@ -70,9 +70,9 @@ export default async function LeaderboardPage() {
               <p className="text-sm text-gray-500 mt-1">
                 {seeAll
                   ? 'All players across all leagues.'
-                  : isPlayer
+                  : (isLoggedIn && userLeague)
                     ? `Showing ${userLeague} — your league.`
-                    : 'Log in to see your league standings.'}
+                    : 'Log in to see your full league standings.'}
               </p>
             </div>
 
@@ -119,7 +119,7 @@ export default async function LeaderboardPage() {
                   <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                     <div>
                       <h2 className="text-base font-bold text-gray-800">
-                        {isAdmin ? 'All Players' : userLeague}
+                        {seeAll ? 'All Players' : (userLeague || 'Rankings')}
                       </h2>
                       <p className="text-xs text-gray-400 mt-0.5">{board.length} player{board.length !== 1 ? 's' : ''}</p>
                     </div>

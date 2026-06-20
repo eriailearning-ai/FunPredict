@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import FlagImg from '@/components/ui/FlagImg'
+import LocalTime from '@/components/ui/LocalTime'
 import Navbar from '@/components/layout/Navbar'
 import SiteBanner from '@/components/ui/SiteBanner'
 import Footer from '@/components/layout/Footer'
@@ -30,6 +31,8 @@ type BonusQuestion = {
   myAnswer: string | null; myPoints: number | null
 }
 type LeagueBoard = { league: string; players: Array<{ id: string; display: string; total: number; rank: number }> }
+type BonusEntry = { questionId: number; answer: string | null; points: number | null; status: string; correctAnswer: string | null }
+type PredDist = { home: number; draw: number; away: number; total: number }
 
 type Props = {
   isLoggedIn: boolean
@@ -43,6 +46,8 @@ type Props = {
   nextMatch: Match | null
   comingUp: Match | null
   topScorers: Array<{ name: string; team: string; goals: number; assists: number }>
+  bonusMap: Record<number, BonusEntry>
+  predDistMap: Record<number, PredDist>
 }
 
 /* ─── Poll colors ───────────────────────────────────────── */
@@ -55,9 +60,6 @@ function isLockedByTime(matchDate: string) {
 }
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-function fmtTime(d: string) {
-  return new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 function fmtDayFull(d: string) {
   return new Date(d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()
@@ -81,6 +83,7 @@ export default function PredictionsClient({
   userLeague, userTotalPoints: initPts, userRank: initRank,
   topPerformers: initTop, leagueScoreboards,
   groupAStandings, nextMatch, comingUp, topScorers,
+  bonusMap: initBonusMap, predDistMap,
 }: Props) {
   /* Predictions state */
   const [preds, setPreds] = useState<Record<number, { h: string; a: string }>>(
@@ -104,6 +107,20 @@ export default function PredictionsClient({
     )
   )
   const [jokerSaving, setJokerSaving] = useState<number | null>(null)
+
+  /* Prediction distribution popup */
+  const [showDist, setShowDist] = useState<number | null>(null)
+
+  /* Per-match bonus questions */
+  const [bonusAnswers, setBonusAnswers] = useState<Record<number, string>>(
+    Object.fromEntries(
+      Object.entries(initBonusMap)
+        .filter(([, b]) => b.answer !== null)
+        .map(([k, b]) => [+k, b.answer!])
+    )
+  )
+  const [bonusSaving, setBonusSaving] = useState<number | null>(null)
+  const [bonusSaved,  setBonusSaved]  = useState<Record<number, boolean>>({})
 
   /* Live score refresh */
   const [livePoints, setLivePoints]   = useState(initPts)
@@ -206,6 +223,21 @@ export default function PredictionsClient({
     })
     setJokerSaving(null)
     refreshScores()
+  }
+
+  /* Save per-match bonus answer */
+  async function saveBonusAnswer(matchId: number, questionId: number) {
+    const answer = bonusAnswers[matchId]
+    if (!answer?.trim()) return
+    setBonusSaving(matchId)
+    await fetch('/api/bonus', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: { [questionId]: answer.trim() } }),
+    })
+    setBonusSaving(null)
+    setBonusSaved(s => ({ ...s, [matchId]: true }))
+    setTimeout(() => setBonusSaved(s => ({ ...s, [matchId]: false })), 2500)
   }
 
   /* Stats from match points (for pie chart) */
@@ -325,80 +357,192 @@ export default function PredictionsClient({
                               const timeLocked = isLockedByTime(m.matchDate)
                               const locked = m.locked || m.status === 'finished' || timeLocked
                               const pts = liveMatchPts[m.id]
+                              const bonus = initBonusMap[m.id]
+                              const dist = predDistMap[m.id]
+                              const jokerActive = !!jokers[m.id]
                               return (
-                                <div key={m.id} className="bg-white rounded-xl shadow-sm p-4">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-xs text-gray-500">{key}</span>
+                                <div key={m.id} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                                  {/* Card header: date + time + pts */}
+                                  <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100" style={{ background: '#f9fafb' }}>
+                                    <span className="text-xs text-gray-500 font-medium">{key}</span>
                                     <div className="flex items-center gap-2">
                                       {pts !== undefined && pts !== null && (
                                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${pts >= 5 ? 'bg-green-100 text-green-700' : pts >= 3 ? 'bg-blue-100 text-blue-700' : pts > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
                                           {pts} pts
                                         </span>
                                       )}
-                                      <span className="text-xs text-gray-400 font-medium">{fmtTime(m.matchDate)}</span>
+                                      <LocalTime iso={m.matchDate} className="text-xs text-gray-500 font-medium" />
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                      <FlagImg iso2={m.homeTeam.flag} name={m.homeTeam.name} size="sm" />
-                                      <span className="text-xs sm:text-sm font-semibold text-gray-800 truncate">{m.homeTeam.name}</span>
+
+                                  <div className="flex">
+                                    {/* Main match content */}
+                                    <div className="flex-1 p-4 min-w-0">
+                                      {/* Teams row: Flag Name ... Name Flag */}
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                          <FlagImg iso2={m.homeTeam.flag} name={m.homeTeam.name} size="md" />
+                                          <span className="text-sm font-bold text-gray-900 truncate">{m.homeTeam.name}</span>
+                                        </div>
+                                        {m.status === 'finished' ? (
+                                          <span className="text-base font-black text-gray-900 flex-shrink-0 px-1">{m.homeScore} – {m.awayScore}</span>
+                                        ) : m.status === 'live' ? (
+                                          <span className="text-base font-black flex-shrink-0 px-1" style={{ color: '#dc2626' }}>{m.homeScore} – {m.awayScore}</span>
+                                        ) : (
+                                          <span className="text-xs text-gray-300 flex-shrink-0 px-1">vs</span>
+                                        )}
+                                        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                                          <span className="text-sm font-bold text-gray-900 truncate text-right">{m.awayTeam.name}</span>
+                                          <FlagImg iso2={m.awayTeam.flag} name={m.awayTeam.name} size="md" />
+                                        </div>
+                                      </div>
+
+                                      {/* Prediction input row */}
+                                      {!locked ? (
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <input type="number" min="0" max="20"
+                                            value={p.h} onChange={e => setPreds(s => ({ ...s, [m.id]: { ...s[m.id], h: e.target.value } }))}
+                                            className="w-12 text-center text-base font-bold border-2 border-blue-200 rounded-lg py-1.5 focus:outline-none focus:border-blue-500"
+                                            placeholder="0" />
+                                          <span className="text-gray-300 text-xs">vs</span>
+                                          <input type="number" min="0" max="20"
+                                            value={p.a} onChange={e => setPreds(s => ({ ...s, [m.id]: { ...s[m.id], a: e.target.value } }))}
+                                            className="w-12 text-center text-base font-bold border-2 border-blue-200 rounded-lg py-1.5 focus:outline-none focus:border-blue-500"
+                                            placeholder="0" />
+                                          <button onClick={() => savePred(m.id)} disabled={saving === m.id}
+                                            className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold disabled:opacity-50 transition-colors"
+                                            style={{ background: saved[m.id] ? '#166534' : '#1e3a5f' }}>
+                                            {saving === m.id ? '…' : saved[m.id] ? '✓ Saved' : 'Save'}
+                                          </button>
+                                          {predMap[m.id] && (
+                                            <span className="text-xs text-gray-400 ml-auto">
+                                              {predMap[m.id].homeScore}–{predMap[m.id].awayScore}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          {m.status === 'finished' ? (
+                                            <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1.5 rounded-lg">Final</span>
+                                          ) : (
+                                            <span className="text-xs text-orange-500">🔒 {timeLocked ? 'Kicks off soon' : 'Locked'}</span>
+                                          )}
+                                          {predMap[m.id] && (
+                                            <span className="text-xs text-gray-400 ml-2">
+                                              My pick: {predMap[m.id].homeScore}–{predMap[m.id].awayScore}
+                                              {jokerActive && <span className="ml-1 font-bold" style={{ color: '#d97706' }}>×2</span>}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Per-match bonus question */}
+                                      {bonus && (
+                                        <div className="mt-3 pt-3 border-t border-gray-100">
+                                          <div className="flex items-start gap-2 mb-1.5">
+                                            <p className="text-xs text-gray-700 font-medium flex-1 leading-snug">
+                                              Name one player who will score in {m.homeTeam.name} vs {m.awayTeam.name}
+                                            </p>
+                                            <span className="flex-shrink-0 text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: '#fef9c3', color: '#92400e' }}>
+                                              2 pts
+                                            </span>
+                                          </div>
+                                          {bonus.status === 'open' ? (
+                                            <div className="flex gap-2">
+                                              <input type="text"
+                                                value={bonusAnswers[m.id] ?? ''}
+                                                onChange={e => setBonusAnswers(s => ({ ...s, [m.id]: e.target.value }))}
+                                                placeholder="Player name…"
+                                                className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-400 min-w-0"
+                                              />
+                                              <button
+                                                onClick={() => saveBonusAnswer(m.id, bonus.questionId)}
+                                                disabled={bonusSaving === m.id || !bonusAnswers[m.id]?.trim()}
+                                                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0 disabled:opacity-40 transition-colors"
+                                                style={{ background: bonusSaved[m.id] ? '#166534' : '#8b1c2c' }}>
+                                                {bonusSaving === m.id ? '…' : bonusSaved[m.id] ? '✓' : 'Submit'}
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <div className="space-y-1">
+                                              {bonus.answer ? (
+                                                <p className="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-white" style={{ background: '#1e3a5f' }}>
+                                                  my answer: {bonus.answer}
+                                                </p>
+                                              ) : (
+                                                <p className="text-xs text-gray-400 italic">No answer submitted</p>
+                                              )}
+                                              <p className="text-xs text-gray-400">
+                                                Closed
+                                                {bonus.points !== null
+                                                  ? ` · points awarded: ${bonus.points} points`
+                                                  : ' · Pending grading'}
+                                                {bonus.correctAnswer ? ` · correct: ${bonus.correctAnswer}` : ''}
+                                              </p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
-                                    {m.status === 'finished' && (
-                                      <span className="text-sm font-black text-gray-800 flex-shrink-0">{m.homeScore}–{m.awayScore}</span>
-                                    )}
-                                    {m.status !== 'finished' && <span className="text-xs text-gray-300 flex-shrink-0">vs</span>}
-                                    <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
-                                      <span className="text-xs sm:text-sm font-semibold text-gray-800 truncate text-right">{m.awayTeam.name}</span>
-                                      <FlagImg iso2={m.awayTeam.flag} name={m.awayTeam.name} size="sm" />
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <input type="number" min="0" max="20" disabled={locked}
-                                      value={p.h} onChange={e => setPreds(s => ({ ...s, [m.id]: { ...s[m.id], h: e.target.value } }))}
-                                      className="w-12 text-center text-base font-bold border-2 border-blue-200 rounded-lg py-1.5 focus:outline-none focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-300"
-                                      placeholder="0" />
-                                    <span className="text-gray-300 text-xs">vs</span>
-                                    <input type="number" min="0" max="20" disabled={locked}
-                                      value={p.a} onChange={e => setPreds(s => ({ ...s, [m.id]: { ...s[m.id], a: e.target.value } }))}
-                                      className="w-12 text-center text-base font-bold border-2 border-blue-200 rounded-lg py-1.5 focus:outline-none focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-300"
-                                      placeholder="0" />
-                                    {!locked && (
-                                      <button onClick={() => savePred(m.id)} disabled={saving === m.id}
-                                        className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold disabled:opacity-50 transition-colors"
-                                        style={{ background: saved[m.id] ? '#166534' : '#6b7280' }}>
-                                        {saving === m.id ? '…' : saved[m.id] ? '✓ Saved' : 'Save'}
-                                      </button>
-                                    )}
-                                    {locked && (
-                                      <span className="px-3 py-1.5 bg-gray-100 text-gray-400 text-xs rounded-lg">
-                                        {m.status === 'finished' ? 'Final' : '🔒 Locked'}
-                                      </span>
-                                    )}
-                                    {/* Joker toggle */}
-                                    {!locked && (
+
+                                    {/* Right icons column: pie chart + soccer ball joker */}
+                                    <div className="flex flex-col items-center justify-start gap-3 pt-4 pb-4 px-3 border-l border-gray-100 min-w-[52px]">
+                                      {/* Pie chart: prediction distribution */}
                                       <button
-                                        onClick={() => toggleJoker(m.id, m.group)}
-                                        disabled={jokerSaving === m.id}
-                                        title={jokers[m.id] ? 'Joker active — click to remove (×2 this match)' : `Apply joker to double points for Group ${m.group}`}
-                                        className={`ml-auto px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                          jokers[m.id]
-                                            ? 'bg-yellow-400 text-gray-900 shadow-md ring-2 ring-yellow-300'
-                                            : 'bg-gray-100 text-gray-500 hover:bg-yellow-50 hover:text-yellow-700'
-                                        }`}>
-                                        {jokerSaving === m.id ? '…' : jokers[m.id] ? '🃏 ×2 ON' : '🃏 Joker'}
+                                        onClick={() => setShowDist(prev => prev === m.id ? null : m.id)}
+                                        title="View prediction distribution"
+                                        className="flex flex-col items-center gap-0.5 group">
+                                        <DistPieIcon dist={dist} active={showDist === m.id} />
+                                        <span className="text-[9px] text-gray-400 group-hover:text-blue-500">picks</span>
                                       </button>
-                                    )}
-                                    {locked && jokers[m.id] && (
-                                      <span className="ml-auto px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-lg font-bold">🃏 ×2</span>
-                                    )}
+
+                                      {/* Soccer ball joker icon */}
+                                      {(!locked || jokerActive) && (
+                                        <button
+                                          onClick={() => !locked && toggleJoker(m.id, m.group)}
+                                          disabled={jokerSaving === m.id || locked}
+                                          title="Click to toggle your multiplier"
+                                          className={`flex flex-col items-center gap-0.5 transition-all ${locked ? 'cursor-default' : 'cursor-pointer'} ${jokerActive ? 'opacity-100' : 'opacity-35 hover:opacity-70'}`}>
+                                          <span className={`text-xl leading-none ${jokerActive ? 'filter drop-shadow' : ''}`}>⚽</span>
+                                          <span className={`text-[9px] font-bold leading-none ${jokerActive ? 'text-yellow-600' : 'text-gray-400'}`}>
+                                            {jokerSaving === m.id ? '…' : jokerActive ? '×2' : 'joker'}
+                                          </span>
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
-                                  {predMap[m.id] && (
-                                    <p className="text-xs text-gray-400 mt-2">
-                                      Your prediction: {predMap[m.id].homeScore}–{predMap[m.id].awayScore}
-                                    </p>
-                                  )}
-                                  {timeLocked && m.status !== 'finished' && (
-                                    <p className="text-xs text-orange-500 mt-1">🔒 Locked — kicks off soon</p>
+
+                                  {/* Distribution popup */}
+                                  {showDist === m.id && (
+                                    <div className="border-t border-gray-100 px-4 py-3" style={{ background: '#f9fafb' }}>
+                                      {dist && dist.total > 0 ? (
+                                        <>
+                                          <p className="text-xs font-bold text-gray-600 mb-2">{dist.total} prediction{dist.total !== 1 ? 's' : ''} so far</p>
+                                          <div className="space-y-1.5">
+                                            {[
+                                              { label: `${m.homeTeam.name} win`, val: dist.home, color: '#3b82f6' },
+                                              { label: 'Draw', val: dist.draw, color: '#f59e0b' },
+                                              { label: `${m.awayTeam.name} win`, val: dist.away, color: '#ef4444' },
+                                            ].map(row => {
+                                              const pct = Math.round((row.val / dist.total) * 100)
+                                              return (
+                                                <div key={row.label}>
+                                                  <div className="flex justify-between text-xs mb-0.5">
+                                                    <span className="text-gray-600">{row.label}</span>
+                                                    <span className="font-bold text-gray-700">{row.val} ({pct}%)</span>
+                                                  </div>
+                                                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: row.color }} />
+                                                  </div>
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <p className="text-xs text-gray-400">No predictions yet for this match.</p>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               )
@@ -519,7 +663,7 @@ export default function PredictionsClient({
                 <div className="text-center py-1.5 rounded-lg text-white text-xs font-semibold mb-1" style={{ background: '#0f2040' }}>
                   {fmtDayFull(comingUp.matchDate)}
                 </div>
-                <p className="text-center text-yellow-400 text-xl font-black">{fmtTime(comingUp.matchDate)}</p>
+                <p className="text-center text-yellow-400 text-xl font-black"><LocalTime iso={comingUp.matchDate} color="#facc15" /></p>
               </div>
             </div>
           )}
@@ -540,7 +684,7 @@ export default function PredictionsClient({
                 <div className="text-center py-1.5 rounded-lg text-white text-xs font-semibold mb-1" style={{ background: '#0f2040' }}>
                   {fmtDayFull(nextMatch.matchDate)}
                 </div>
-                <p className="text-center text-yellow-400 text-xl font-black">{fmtTime(nextMatch.matchDate)}</p>
+                <p className="text-center text-yellow-400 text-xl font-black"><LocalTime iso={nextMatch.matchDate} color="#facc15" /></p>
               </div>
             </div>
           )}
@@ -671,6 +815,50 @@ export default function PredictionsClient({
       {/* Shared footer */}
       <Footer />
     </div>
+  )
+}
+
+/* ─── Dist Pie Icon ─────────────────────────────────────── */
+function DistPieIcon({ dist, active }: { dist?: PredDist; active?: boolean }) {
+  const size = 24
+  if (!dist || dist.total === 0) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" className={`transition-opacity ${active ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}>
+        <circle cx="12" cy="12" r="9" fill="none" stroke="#d1d5db" strokeWidth="2" />
+        <path d="M12 3 L12 12 L21 12" fill="none" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    )
+  }
+  const r = 9, cx = 12, cy = 12
+  const slices = [
+    { val: dist.home, color: '#3b82f6' },
+    { val: dist.draw, color: '#f59e0b' },
+    { val: dist.away, color: '#ef4444' },
+  ]
+  let cumPct = 0
+  const paths: JSX.Element[] = []
+  for (const s of slices) {
+    const pct = s.val / dist.total
+    if (pct <= 0) { cumPct += pct; continue }
+    if (pct >= 1) {
+      paths.push(<circle key={s.color} cx={cx} cy={cy} r={r} fill={s.color} />)
+      break
+    }
+    const startA = cumPct * 2 * Math.PI - Math.PI / 2
+    const endA = (cumPct + pct) * 2 * Math.PI - Math.PI / 2
+    const x1 = cx + r * Math.cos(startA), y1 = cy + r * Math.sin(startA)
+    const x2 = cx + r * Math.cos(endA),   y2 = cy + r * Math.sin(endA)
+    paths.push(
+      <path key={s.color}
+        d={`M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${pct > 0.5 ? 1 : 0} 1 ${x2} ${y2} Z`}
+        fill={s.color} />
+    )
+    cumPct += pct
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={`rounded-full transition-all ${active ? 'ring-2 ring-blue-400' : ''}`}>
+      {paths}
+    </svg>
   )
 }
 
@@ -992,16 +1180,16 @@ function ScoringRules() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {[
-                { pred: 'Exact score',               ex: 'Result 2–1, you predicted 2–1',       pts: '5' },
-                { pred: 'Correct outcome only',       ex: 'Result 2–1, you predicted 3–1',       pts: '3' },
-                { pred: 'One team correct, wrong result', ex: 'Result 2–1, you predicted 2–0',   pts: '1' },
-                { pred: 'Both teams correct, wrong result', ex: 'Result 2–1, you predicted 2–1 — already exact', pts: '—' },
-                { pred: 'Wrong outcome',              ex: 'Result 2–1, you predicted 0–1',       pts: '0' },
+                { pred: 'Exact score',               ex: 'Result 2-1, you predicted 2-1',       pts: '5' },
+                { pred: 'Correct outcome only',       ex: 'Result 2-1, you predicted 3-1',       pts: '3' },
+                { pred: 'One team correct, wrong result', ex: 'Result 2-1, you predicted 2-0',   pts: '1' },
+                { pred: 'Both teams correct, wrong result', ex: 'Result 2-1, you predicted 2-1 -- already exact', pts: '--' },
+                { pred: 'Wrong outcome',              ex: 'Result 2-1, you predicted 0-1',       pts: '0' },
               ].map(({ pred, ex, pts }) => (
                 <tr key={pred} className="hover:bg-gray-50">
                   <td className="px-4 py-2.5 text-xs font-medium text-gray-800">{pred}</td>
                   <td className="px-4 py-2.5 text-xs text-gray-500">{ex}</td>
-                  <td className="px-4 py-2.5 text-center text-xs font-black" style={{ color: pts === '0' || pts === '—' ? '#9ca3af' : '#1e3a5f' }}>{pts}</td>
+                  <td className="px-4 py-2.5 text-center text-xs font-black" style={{ color: pts === '0' || pts === '--' ? '#9ca3af' : '#1e3a5f' }}>{pts}</td>
                 </tr>
               ))}
             </tbody>
@@ -1011,12 +1199,11 @@ function ScoringRules() {
 
       <hr className="border-gray-200" />
 
-      {/* ── Joker rules ── */}
       <div>
-        <h3 className="text-sm font-bold mb-2" style={{ color: '#1e3a5f' }}>🃏 Joker</h3>
+        <h3 className="text-sm font-bold mb-2" style={{ color: '#1e3a5f' }}>Joker</h3>
         <ul className="text-sm text-gray-600 space-y-1.5 list-disc list-outside ml-5">
           <li>You get one joker per stage (group stage, round of 32, round of 16, quarter-finals, semi-finals, final).</li>
-          <li>Apply your joker to one match per stage to double that match's points.</li>
+          <li>Apply your joker to one match per stage to double that match points.</li>
           <li>You can change or remove your joker up to kick-off of the match it is applied to.</li>
           <li>If the match you jokered is postponed or cancelled, your joker is returned.</li>
         </ul>
@@ -1024,34 +1211,31 @@ function ScoringRules() {
 
       <hr className="border-gray-200" />
 
-      {/* ── Bonus questions ── */}
       <div>
-        <h3 className="text-sm font-bold mb-2" style={{ color: '#1e3a5f' }}>❓ Bonus questions</h3>
+        <h3 className="text-sm font-bold mb-2" style={{ color: '#1e3a5f' }}>Bonus questions</h3>
         <ul className="text-sm text-gray-600 space-y-1.5 list-disc list-outside ml-5">
-          <li>Bonus questions appear in the <strong>Bonus Points</strong> tab throughout the tournament.</li>
+          <li>Bonus questions appear directly on each match card (2 pts each) and in the Bonus Points tab.</li>
           <li>Each question states its point value and the deadline for answering.</li>
-          <li>Once the admin confirms the correct answer, points are awarded automatically to everyone who got it right.</li>
+          <li>Once the admin confirms the correct answer, points are awarded automatically.</li>
           <li>Bonus question points are added on top of your match-prediction total.</li>
         </ul>
       </div>
 
       <hr className="border-gray-200" />
 
-      {/* ── Deadlines ── */}
       <div>
-        <h3 className="text-sm font-bold mb-2" style={{ color: '#1e3a5f' }}>🔒 Deadlines & locks</h3>
+        <h3 className="text-sm font-bold mb-2" style={{ color: '#1e3a5f' }}>Deadlines &amp; locks</h3>
         <ul className="text-sm text-gray-600 space-y-1.5 list-disc list-outside ml-5">
-          <li>Predictions for each match lock <strong>15 minutes before kick-off</strong>. You cannot change them after that.</li>
+          <li>Predictions for each match lock 15 minutes before kick-off. You cannot change them after that.</li>
           <li>You can update your prediction as many times as you like before the lock.</li>
-          <li>If you do not submit a prediction before the lock, you score 0 for that match — no retroactive entries.</li>
+          <li>If you do not submit a prediction before the lock, you score 0 for that match.</li>
         </ul>
       </div>
 
       <hr className="border-gray-200" />
 
-      {/* ── Tiebreakers ── */}
       <div>
-        <h3 className="text-sm font-bold mb-2" style={{ color: '#1e3a5f' }}>🏅 Tiebreakers</h3>
+        <h3 className="text-sm font-bold mb-2" style={{ color: '#1e3a5f' }}>Tiebreakers</h3>
         <p className="text-sm text-gray-600 mb-2">When two or more players have the same total points, rank is decided by:</p>
         <ol className="text-sm text-gray-600 space-y-1 list-decimal list-outside ml-5">
           <li>Most exact scores (5-point predictions)</li>
@@ -1062,31 +1246,27 @@ function ScoringRules() {
 
       <hr className="border-gray-200" />
 
-      {/* ── Leagues ── */}
       <div>
-        <h3 className="text-sm font-bold mb-2" style={{ color: '#1e3a5f' }}>🏆 Leagues</h3>
+        <h3 className="text-sm font-bold mb-2" style={{ color: '#1e3a5f' }}>Leagues</h3>
         <p className="text-sm text-gray-600">
-          Players are grouped into leagues — <strong>Aila Attackers</strong>, <strong>Sukuti Strikers</strong>, and <strong>Gorkhali Gooners</strong>.
-          The Scoreboard and Leagues Standings show rankings within each league so you can compare with the people you know.
-          The same scoring rules apply in every league.
+          Players are grouped into leagues. The Scoreboard shows rankings within each league so you can compare with the people you know.
         </p>
       </div>
 
       <hr className="border-gray-200" />
 
-      {/* ── Fun disclaimer ── */}
       <div className="rounded-xl p-4 text-sm text-gray-500 border border-gray-100" style={{ background: '#f9fafb' }}>
         <p>
-          <strong>This is a free, fun pool for friends and family.</strong> No entry fees, no real prizes — just bragging rights.
+          This is a free, fun pool for friends and family. No entry fees, no real prizes -- just bragging rights.
           Predictions are for entertainment only.{' '}
-          <Link href="/disclaimer" className="text-blue-600 hover:underline">Read the full disclaimer →</Link>
+          <Link href="/disclaimer" className="text-blue-600 hover:underline">Read the full disclaimer</Link>
         </p>
       </div>
     </div>
   )
 }
 
-/* ─── Audience Poll tab ────────────────────────────────── */
+/* --- Audience Poll tab ---------------------------------------- */
 function AudiencePollTab({
   polls, loaded, onVote, voting, isLoggedIn,
 }: {
@@ -1111,14 +1291,13 @@ function AudiencePollTab({
     <div className="space-y-5">
       <p className="text-sm text-gray-500">Poll votes are for fun and do not count for points.</p>
 
-      {/* Header banner */}
       <div className="rounded-xl overflow-hidden">
         <div className="px-6 py-5" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #8b1c2c 100%)' }}>
-          <h2 className="text-xl font-black text-yellow-400 mb-1">🏆 Next 3 matches</h2>
+          <h2 className="text-xl font-black text-yellow-400 mb-1">Next 3 matches</h2>
           <p className="text-sm text-white">
             Poll votes do not count for points.{' '}
-            <Link href="#predict" className="text-yellow-400 font-semibold hover:underline" onClick={() => {}}>
-              Enter your official prediction →
+            <Link href="#predict" className="text-yellow-400 font-semibold hover:underline">
+              Enter your official prediction
             </Link>
           </p>
         </div>
@@ -1126,7 +1305,7 @@ function AudiencePollTab({
 
       {polls.length === 0 ? (
         <div className="bg-white rounded-xl p-8 text-center shadow-sm">
-          <p className="text-gray-500 text-sm">No polls open right now — check back before the next match!</p>
+          <p className="text-gray-500 text-sm">No polls open right now -- check back before the next match!</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -1136,12 +1315,11 @@ function AudiencePollTab({
 
             return (
               <div key={poll.id} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                {/* Poll header */}
                 <div className="px-6 py-4 border-b border-gray-100">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-bold text-gray-900 text-base">
-                        {pi === 0 ? 'Vote now — next match' : `Poll ${pi + 1}`}
+                        {pi === 0 ? 'Vote now -- next match' : 'Poll ' + (pi + 1)}
                       </h3>
                       <p className="text-xs font-semibold mt-0.5" style={{ color: '#16a34a' }}>
                         {poll.status === 'open' ? 'Voting open until kickoff' : 'Poll closed'}
@@ -1153,7 +1331,6 @@ function AudiencePollTab({
                   </div>
                 </div>
 
-                {/* Poll question + options */}
                 <div className="px-6 py-5">
                   <p className="text-center text-gray-700 font-medium text-base mb-5">{poll.question}</p>
 
@@ -1167,14 +1344,11 @@ function AudiencePollTab({
 
                       return (
                         <div key={opt}>
-                          {/* Option row */}
-                          <label className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${
-                            isChosen ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-gray-200'
-                          }`}
+                          <label className={'flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ' + (isChosen ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-gray-200')}
                             style={{ cursor: poll.status !== 'open' ? 'default' : 'pointer' }}>
                             <input
                               type="radio"
-                              name={`poll-${poll.id}`}
+                              name={'poll-' + poll.id}
                               value={opt}
                               checked={isChosen}
                               onChange={() => {
@@ -1188,43 +1362,7 @@ function AudiencePollTab({
                             <span className="text-sm font-bold text-gray-500">{pct}%</span>
                           </label>
 
-                          {/* Progress bar */}
                           <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: bg }}>
                             <div
                               className="h-full rounded-full transition-all duration-500"
-                              style={{ width: `${pct}%`, background: color }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Vote button */}
-                  <div className="mt-5 text-center">
-                    {hasVoted ? (
-                      <p className="text-xs text-gray-400">
-                        {poll.myVote ? `You voted: ${poll.myVote}` : 'Vote registered! Waiting for confirmation…'}
-                      </p>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          const choice = selected[poll.id]
-                          if (choice) onVote(poll.id, choice)
-                        }}
-                        disabled={!selected[poll.id] || voting[poll.id] || poll.status !== 'open'}
-                        className="px-8 py-2.5 rounded-xl border-2 border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {voting[poll.id] ? 'Voting…' : isLoggedIn ? 'Vote' : 'Anonymous Vote'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
+                              st

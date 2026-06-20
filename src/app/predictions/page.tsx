@@ -15,7 +15,6 @@ export default async function PredictionsPage() {
   const seeAll        = isAdmin || isSuperPlayer
   const userLeague    = (user as any)?.league ?? ''
 
-  // All approved users for leaderboard + top performers
   const allUsers = await prisma.user.findMany({
     where: { status: 'approved' },
     include: { predictions: { select: { points: true } } },
@@ -31,13 +30,10 @@ export default async function PredictionsPage() {
     }))
     .sort((a, b) => b.total - a.total)
 
-  // Admin/superplayer see all leagues; regular players see only their own
-  // But everyone (including admin) is treated as a participant who can make predictions
   const topPerformers = (seeAll || !userLeague)
     ? fullBoard
     : fullBoard.filter(p => p.league === userLeague)
 
-  // Scoreboard: admins/superplayers see all leagues; players see their own
   const visibleLeagues = (seeAll || !userLeague) ? LEAGUES : [userLeague]
   const leagueScoreboards = visibleLeagues.map(league => ({
     league,
@@ -46,7 +42,6 @@ export default async function PredictionsPage() {
       .map((p, i) => ({ ...p, rank: i + 1 })),
   }))
 
-  // Group A standings (computed from finished matches) + top scorers
   const [groupATeams, groupAMatches, scorerSetting] = await Promise.all([
     prisma.team.findMany({ where: { group: 'A' } }).catch(() => []),
     prisma.match.findMany({ where: { group: 'A', status: 'finished' }, include: { homeTeam: true, awayTeam: true } }).catch(() => []),
@@ -74,20 +69,16 @@ export default async function PredictionsPage() {
       }
     }
     groupAStandings = Object.values(tally)
-      .map(t => ({ flag: toIso2(t.code), name: t.name, p: t.p, pts: t.w * 3 + t.d, gd: `${t.gf}-${t.ga}` }))
-      .sort((a, b) => {
-        if (b.pts !== a.pts) return b.pts - a.pts
-        return (parseInt(b.gd) - parseInt(b.gd.split('-')[1])) - (parseInt(a.gd) - parseInt(a.gd.split('-')[1]))
-      })
+      .map(t => ({ flag: toIso2(t.code), name: t.name, p: t.p, pts: t.w * 3 + t.d, gd: t.gf + '-' + t.ga }))
+      .sort((a, b) => b.pts - a.pts)
   } else {
     groupAStandings = groupATeams.map(t => ({ flag: toIso2(t.code), name: t.name, p: 0, pts: 0, gd: '0-0' }))
   }
 
-  // Next 2 upcoming/live matches for sidebar (mirrors sidebar.ts so live matches show too)
   const upcoming = await prisma.match.findMany({
     where: {
       status: { in: ['upcoming', 'live'] },
-      matchDate: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) }, // include matches started up to 2h ago
+      matchDate: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) },
     },
     orderBy: { matchDate: 'asc' },
     take: 2,
@@ -110,11 +101,12 @@ export default async function PredictionsPage() {
   const nextMatch = toSidebarMatch(upcoming[0] ?? null)
   const comingUp  = toSidebarMatch(upcoming[1] ?? null)
 
-  // Player-specific data
   let matches: any[] = []
   let predMap: Record<number, any> = {}
   let userTotalPoints = 0
   let userRank = 0
+  let bonusMap: Record<number, { questionId: number; answer: string | null; points: number | null; status: string; correctAnswer: string | null }> = {}
+  let predDistMap: Record<number, { home: number; draw: number; away: number; total: number }> = {}
 
   if (isApproved) {
     const allMatches = await prisma.match.findMany({
@@ -122,7 +114,7 @@ export default async function PredictionsPage() {
       orderBy: { matchDate: 'asc' },
     }).catch(() => [])
 
-    matches = allMatches.map(m => ({
+    matches = allMatches.map((m: any) => ({
       ...m,
       matchDate: m.matchDate.toISOString(),
       homeTeam: { ...m.homeTeam, flag: toIso2(m.homeTeam.code) },
@@ -135,6 +127,78 @@ export default async function PredictionsPage() {
 
     const myDisplay = (user as any)?.nickname || (user as any)?.username || user?.name
     userRank = topPerformers.findIndex(p => p.display === myDisplay) + 1
+
+    // Per-match bonus questions (auto-create if missing)
+    try {
+      const existingBonus: any[] = await (prisma as any).bonusQuestion.findMany({
+        where: { stage: { startsWith: 'm' } },
+        select: { id: true, stage: true, status: true },
+      })
+      const existingStages = new Set<string>(existingBonus.map((q: any) => String(q.stage)))
+
+      const missing = allMatches
+        .filter((m: any) => !existingStages.has('m' + m.id))
+        .map((m: any) => ({
+          question: 'Name one player who will score in ' + m.homeTeam.name + ' vs ' + m.awayTeam.name,
+          type: 'single',
+          stage: 'm' + m.id,
+          options: '[]',
+          points: 2,
+          status: m.status === 'finished' ? 'closed' : 'open',
+        }))
+      if (missing.length > 0) {
+        await (prisma as any).bonusQuestion.createMany({ data: missing }).catch(() => {})
+      }
+
+      const finishedStages = allMatches
+        .filter((m: any) => m.status === 'finished')
+        .map((m: any) => 'm' + m.id)
+      if (finishedStages.length > 0) {
+        await (prisma as any).bonusQuestion.updateMany({
+          where: { stage: { in: finishedStages }, status: 'open' },
+          data: { status: 'closed' },
+        }).catch(() => {})
+      }
+
+      const matchBonusQs: any[] = await (prisma as any).bonusQuestion.findMany({
+        where: { stage: { startsWith: 'm' } },
+      })
+      const userBonusAs: any[] = user ? await (prisma as any).bonusAnswer.findMany({
+        where: { userId: user.id, questionId: { in: matchBonusQs.map((q: any) => q.id) } },
+      }).catch(() => []) : []
+
+      for (const q of matchBonusQs) {
+        const matchId = parseInt(String(q.stage).slice(1))
+        if (!isNaN(matchId)) {
+          const ua = userBonusAs.find((a: any) => a.questionId === q.id)
+          bonusMap[matchId] = {
+            questionId: q.id,
+            answer: ua?.answer ?? null,
+            points: ua?.points ?? null,
+            status: q.status,
+            correctAnswer: q.status === 'answered' ? q.correctAnswer : null,
+          }
+        }
+      }
+    } catch {}
+
+    // Prediction distribution per match
+    try {
+      const allPredictions = await prisma.prediction.findMany({
+        where: { matchId: { in: allMatches.map((m: any) => m.id) } },
+        select: { matchId: true, homeScore: true, awayScore: true },
+      })
+      for (const pred of allPredictions) {
+        if (!predDistMap[pred.matchId]) predDistMap[pred.matchId] = { home: 0, draw: 0, away: 0, total: 0 }
+        const d = predDistMap[pred.matchId]
+        d.total++
+        const hs = pred.homeScore ?? 0
+        const as_ = pred.awayScore ?? 0
+        if (hs > as_) d.home++
+        else if (hs === as_) d.draw++
+        else d.away++
+      }
+    } catch {}
   }
 
   return (
@@ -149,11 +213,4 @@ export default async function PredictionsPage() {
       userTotalPoints={userTotalPoints}
       userRank={userRank}
       topPerformers={topPerformers}
-      leagueScoreboards={leagueScoreboards}
-      groupAStandings={groupAStandings}
-      nextMatch={nextMatch}
-      comingUp={comingUp}
-      topScorers={topScorers}
-    />
-  )
-}
+      leagueScoreboards=

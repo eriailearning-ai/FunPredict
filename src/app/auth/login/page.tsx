@@ -13,7 +13,8 @@ function LoginForm() {
     pending:  { text: 'Please verify your email before logging in.', hint: 'Check your inbox (and spam folder) for the verification link.' },
     awaiting: { text: "Your account hasn't been approved yet.", hint: 'The admin has been notified — please try again later.' },
     denied:   { text: 'Your account was not approved.', hint: 'Contact the admin if you think this is a mistake.' },
-    expired:  { text: 'Verification link expired.', hint: 'Please register again.' },
+    expired:   { text: 'Verification link expired.', hint: 'Please register again.' },
+    servererr: { text: 'Something went wrong on our end.', hint: 'Please try again in a moment.' },
   }
   const err = params.get('error')
 

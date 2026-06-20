@@ -41,7 +41,7 @@ interface Props {
   showLogo?: boolean
 }
 
-export default function SiteBanner({ height = 'clamp(260px,30vw,380px)', showLogo = true }: Props) {
+export default function SiteBanner({ height = '350px', showLogo = true }: Props) {
   const [current, setCurrent] = useState(0)
 
   useEffect(() => {
@@ -74,14 +74,13 @@ export default function SiteBanner({ height = 'clamp(260px,30vw,380px)', showLog
         <Link
           href="/"
           className="absolute"
-          style={{ top: 'clamp(-24px, -3.5vw, -48px)', left: 20, zIndex: 60 }}
+          style={{ top: '-30px', left: 20, zIndex: 60 }}
           aria-label="Home"
         >
-          {/* Mobile: 75×75 half-size  |  sm+: full 150×150 */}
+          {/* Mobile: 90×60  |  desktop: 180×120 */}
           <div
-            className="bg-white shadow-2xl overflow-hidden flex items-center justify-center
-                        w-[75px] h-[75px] sm:w-[150px] sm:h-[150px]"
-            style={{ borderRadius: 16, border: '3px solid white', padding: 4 }}
+            className="bg-white shadow-2xl overflow-hidden flex items-center justify-center"
+            style={{ width: 180, height: 110, borderRadius: 16, border: '3px solid white', padding: 6 }}
           >
             <img
               src="/images/logo/cropped-worldcup-eagle-logo-1.png"

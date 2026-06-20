@@ -33,7 +33,7 @@ export default function Navbar({ user, visitStats }: Props) {
         <div className="flex items-center h-14 gap-3">
 
           {/* Space reserved for the logo overlay that sits in the SiteBanner (desktop) */}
-          <div className="flex-shrink-0 w-[172px] hidden lg:block" />
+          <div className="flex-shrink-0 w-[200px] hidden lg:block" />
 
           {/* Mobile-only brand text (logo overlay is in the banner below) */}
           <Link href="/" className="lg:hidden flex-shrink-0 text-sm font-bold" style={{ color: '#1e3a5f' }}>

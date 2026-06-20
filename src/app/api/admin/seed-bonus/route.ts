@@ -104,4 +104,13 @@ export async function POST() {
     await prisma.bonusQuestion.create({
       data: {
         question: q.question, type: q.type, stage: q.stage,
-  
+        options: JSON.stringify(q.options),
+        points: q.points,
+        status: q.status,
+      },
+    })
+    created++
+  }
+
+  return NextResponse.json({ ok: true, created, skipped })
+}

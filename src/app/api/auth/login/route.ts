@@ -21,8 +21,6 @@ export async function POST(req: NextRequest) {
     console.error('Body parse error:', e)
   }
 
-  console.log('[login] identifier:', identifier, '| contentType:', contentType)
-
   const isForm = !contentType.includes('application/json')
   const loginUrl = new URL('/auth/login', req.url)
 
@@ -36,11 +34,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Username, email or phone required' }, { status: 400 })
   }
 
-  // Support login by email OR username OR phone
-  const user = await prisma.user.findFirst({
-    where: { OR: [{ email: identifier }, { username: identifier }, { phone: identifier }] },
-  })
-  console.log('[login] user found:', !!user, '| status:', user?.status)
+  // Try email + username + phone; fall back to email + username if phone column not yet migrated
+  let user = null
+  try {
+    user = await prisma.user.findFirst({
+      where: { OR: [{ email: identifier }, { username: identifier }, { phone: identifier }] },
+    })
+  } catch {
+    user = await prisma.user.findFirst({
+      where: { OR: [{ email: identifier }, { username: identifier }] },
+    })
+  }
 
   if (!user) {
     if (isForm) return errRedirect('invalid')

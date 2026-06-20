@@ -9,7 +9,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── Users & Auth ──────────────────────────────────────────
+// ─── Users & Auth ──────────────────────────
 
 model User {
   id            String    @id @default(cuid())
@@ -47,7 +47,7 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// ─── Leagues ───────────────────────────────────────────────
+// ─── Leagues ──────────────────────────
 
 model League {
   id        Int      @id @default(autoincrement())
@@ -58,7 +58,7 @@ model League {
   users     User[]
 }
 
-// ─── Tournament ────────────────────────────────────────────
+// ─── Tournament ──────────────────────────
 
 model Team {
   id        Int    @id @default(autoincrement())
@@ -109,7 +109,7 @@ model Prediction {
   @@unique([userId, matchId])
 }
 
-// ─── Bonus Questions ───────────────────────────────────────
+// ─── Bonus Questions ──────────────────────────
 
 model BonusQuestion {
   id            Int      @id @default(autoincrement())
@@ -140,7 +140,7 @@ model BonusAnswer {
   @@unique([userId, questionId])
 }
 
-// ─── Audience Polls ────────────────────────────────────────
+// ─── Audience Polls ──────────────────────────
 
 model Poll {
   id        Int      @id @default(autoincrement())
@@ -167,7 +167,7 @@ model PollVote {
   @@unique([pollId, userId])
 }
 
-// ─── Audit Log ─────────────────────────────────────────────
+// ─── Audit Log ──────────────────────────
 
 model AuditLog {
   id        Int      @id @default(autoincrement())
@@ -180,7 +180,7 @@ model AuditLog {
   user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// ─── Shoutbox ──────────────────────────────────────────────
+// ─── Shoutbox ──────────────────────────
 
 model ShoutboxMessage {
   id        Int      @id @default(autoincrement())
@@ -193,7 +193,7 @@ model ShoutboxMessage {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
-// ─── Site Settings (key/value cache) ───────────────────────
+// ─── Site Settings (key/value cache) ─────────────────
 
 model Setting {
   key   String @id

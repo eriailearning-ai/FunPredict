@@ -45,7 +45,7 @@ export default function AdminResultsPage() {
 
   useEffect(() => { load() }, [])
 
-  if (loading) return <div className="text-gray-400 py-12 text-center">Loading…</div>
+  if (loading) return <div className="text-gray-400 py-12 text-center">Loading...</div>
 
   const filtered = matches.filter(m => {
     const inFilter =
@@ -67,7 +67,7 @@ export default function AdminResultsPage() {
       </div>
       <p className="text-sm text-gray-500 mb-5">
         Prediction points are calculated automatically when you save a result.
-        You can correct any score at any time — points will be re-calculated.
+        You can correct any score at any time - points will be re-calculated.
       </p>
 
       {/* Summary */}
@@ -95,7 +95,7 @@ export default function AdminResultsPage() {
           </button>
         ))}
         <input
-          type="text" placeholder="Search team or group…"
+          type="text" placeholder="Search team or group..."
           value={search} onChange={e => setSearch(e.target.value)}
           className="ml-auto px-3 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:border-blue-400 w-44"
         />
@@ -130,7 +130,7 @@ export default function AdminResultsPage() {
               {/* Home team */}
               <span className="flex-1 text-right text-sm font-semibold text-gray-800 truncate min-w-0">{m.homeTeam.name}</span>
 
-              {/* Score inputs (always visible) */}
+              {/* Score inputs */}
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <input
                   type="number" min="0" max="30"
@@ -139,7 +139,7 @@ export default function AdminResultsPage() {
                   className="w-10 text-center font-bold border-2 border-gray-200 rounded-lg py-1 text-sm focus:outline-none focus:border-blue-400"
                   placeholder="0"
                 />
-                <span className="text-gray-400 text-xs font-bold">–</span>
+                <span className="text-gray-400 text-xs font-bold">-</span>
                 <input
                   type="number" min="0" max="30"
                   value={s.a}
@@ -157,4 +157,12 @@ export default function AdminResultsPage() {
                 onClick={() => save(m.id)}
                 disabled={isSaving || s.h === '' || s.a === ''}
                 className={'text-xs px-3 py-1.5 rounded-lg font-semibold flex-shrink-0 transition-colors disabled:opacity-40 ' + (isSaved ? 'bg-green-600 text-white' : isFinished ? 'bg-gray-100 text-gray-700 hover:bg-blue-600 hover:text-white border border-gray-200' : 'bg-blue-600 text-white hover:bg-blue-700')}>
-                {isSaving ? '�
+                {isSaving ? 'Saving...' : isSaved ? 'Saved!' : isFinished ? 'Update' : 'Save'}
+              </button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

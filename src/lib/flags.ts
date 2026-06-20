@@ -39,8 +39,13 @@ export const CODE3_TO_ISO2: Record<string, string> = {
   // Group L
   GHA: 'gh', PAN: 'pa', ENG: 'gb-eng', CRO: 'hr',
 
-  // Extra aliases
+  // Extra aliases — old DB codes that may still exist
   GBR: 'gb', UK: 'gb', SCT: 'gb-sct',
+  URU: 'uy', CHI: 'cl', PER: 'pe', VEN: 've', PAR: 'py',
+  CRC: 'cr', HON: 'hn', JAM: 'jm', TRI: 'tt',
+  DEN: 'dk', HUN: 'hu', IRL: 'ie', ROM: 'ro', RUS: 'ru',
+  SRB: 'rs', SVK: 'sk', SVN: 'si', UKR: 'ua', WAL: 'gb-wls',
+  CMR: 'cm', NGA: 'ng', BHR: 'bh', CHN: 'cn', UAE: 'ae',
 }
 
 /** Map from common team names → 2-letter ISO codes */
@@ -91,6 +96,10 @@ export function flagFromName(name: string): string {
 export function flagCdnUrl(iso2: string, size: '20x15' | '24x18' | '40x30' | '48x36' = '48x36'): string {
   return `https://flagcdn.com/${size}/${iso2.toLowerCase()}.png`
 }
+
+/**
+ * Convert a 3-letter DB team code to an ISO 3166-1 alpha-2 code.
+ * Use this instead of re-implementing the lookup in every page.
 
 /**
  * Convert a 3-letter DB team code to an ISO 3166-1 alpha-2 code.

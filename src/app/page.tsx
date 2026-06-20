@@ -56,7 +56,7 @@ export default async function Home() {
     },
     orderBy: { matchDate: 'asc' },
     include: { homeTeam: true, awayTeam: true },
-    take: 12,
+    take: 3,
   }).catch(() => [])
 
   const liveMatches: LiveMatch[] = rawLiveMatches.map(m => ({

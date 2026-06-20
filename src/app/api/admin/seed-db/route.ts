@@ -135,6 +135,25 @@ function matchStatus(utcDate: string) {
 export async function POST() {
   await requireAdmin()
 
+  const validCodes = new Set(TEAMS.map(([code]) => code))
+
+  // 0. Delete matches and teams not in the official 48-team list
+  const invalidTeams = await prisma.team.findMany({
+    where: { code: { notIn: [...validCodes] } },
+    select: { id: true },
+  })
+  if (invalidTeams.length > 0) {
+    const invalidIds = invalidTeams.map(t => t.id)
+    // Delete predictions → matches → teams in order
+    await prisma.prediction.deleteMany({
+      where: { match: { OR: [{ homeTeamId: { in: invalidIds } }, { awayTeamId: { in: invalidIds } }] } },
+    })
+    await prisma.match.deleteMany({
+      where: { OR: [{ homeTeamId: { in: invalidIds } }, { awayTeamId: { in: invalidIds } }] },
+    })
+    await prisma.team.deleteMany({ where: { id: { in: invalidIds } } })
+  }
+
   // 1. Upsert ALL teams in parallel — sequential upserts time out before reaching groups I-L
   const teamResults = await Promise.all(
     TEAMS.map(([code, name, flagCode, group]) =>

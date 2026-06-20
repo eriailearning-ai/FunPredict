@@ -28,18 +28,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Predictions are closed for this match' }, { status: 400 })
   }
 
-  // Joker enforcement: one per group stage — clear any existing joker in same group/stage
+  // Joker enforcement: one per stage (group stage, knockout, etc.)
   if (joker === true) {
-    const sameGroupMatchIds = await prisma.match.findMany({
-      where: { group: match.group, stage: match.stage },
+    const sameStageMatchIds = await prisma.match.findMany({
+      where: { stage: match.stage },
       select: { id: true },
     })
-    const otherIds = sameGroupMatchIds.map(m => m.id).filter(id => id !== matchId)
+    const otherIds = sameStageMatchIds.map(m => m.id).filter(id => id !== matchId)
     if (otherIds.length > 0) {
-      await prisma.prediction.updateMany({
+      const existingJoker = await prisma.prediction.findFirst({
         where: { userId: user.id, matchId: { in: otherIds }, joker: true },
-        data: { joker: false },
       })
+      if (existingJoker) {
+        return NextResponse.json(
+          { error: 'Available multiplier(s) for this set of matches already used.' },
+          { status: 400 }
+        )
+      }
     }
   }
 

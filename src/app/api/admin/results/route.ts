@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   const predictions = await prisma.prediction.findMany({ where: { matchId } })
   for (const pred of predictions) {
-    const points = calcPoints(pred.homeScore, pred.awayScore, homeScore, awayScore)
+    const points = calcPoints(pred.homeScore, pred.awayScore, homeScore, awayScore, pred.joker)
     await prisma.prediction.update({ where: { id: pred.id }, data: { points } })
   }
 

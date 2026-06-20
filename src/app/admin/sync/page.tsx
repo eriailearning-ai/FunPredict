@@ -8,6 +8,8 @@ export default function AdminSyncPage() {
   const [pollResult, setPollResult]     = useState<any>(null)
   const [scorerStatus, setScorerStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
   const [scorerResult, setScorerResult] = useState<any>(null)
+  const [seedStatus, setSeedStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
+  const [seedResult, setSeedResult] = useState<any>(null)
 
   async function sync() {
     setStatus('syncing')
@@ -60,7 +62,7 @@ export default function AdminSyncPage() {
       {/* Manual sync */}
       <div className="bg-white rounded-xl shadow-sm p-5">
         <h2 className="text-sm font-bold text-gray-800 mb-3">Manual Sync</h2>
-        <p className="text-sm text-gray-500 mb-4">Click to fetch the latest scores right now. During matches, results and predictions are updated automatically.</p>
+        <p className="text-sm text-gray-500 mb-4">Click to fetch the latest scores right now.</p>
         <button
           onClick={sync}
           disabled={status === 'syncing'}
@@ -69,7 +71,6 @@ export default function AdminSyncPage() {
         >
           {status === 'syncing' ? '🔄 Syncing…' : status === 'done' ? '✅ Sync Complete' : '🔄 Sync Scores Now'}
         </button>
-
         {result && (
           <div className={`mt-4 p-4 rounded-xl text-sm ${result.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
             {result.error ? (
@@ -91,7 +92,6 @@ export default function AdminSyncPage() {
         <h2 className="text-sm font-bold text-gray-800 mb-3">Auto-Create Audience Polls</h2>
         <p className="text-sm text-gray-500 mb-4">
           Automatically creates polls for the next 3 upcoming matches (if they don't already exist).
-          Run this after adding new matches.
         </p>
         <button
           onClick={syncPolls}
@@ -101,7 +101,6 @@ export default function AdminSyncPage() {
         >
           {pollStatus === 'syncing' ? '🔄 Creating polls…' : pollStatus === 'done' ? '✅ Polls synced' : '🗳 Sync Polls for Next 3 Matches'}
         </button>
-
         {pollResult && (
           <div className={`mt-4 p-4 rounded-xl text-sm ${pollResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
             {pollResult.error
@@ -141,22 +140,36 @@ export default function AdminSyncPage() {
         )}
       </div>
 
-      {/* Auto-sync setup */}
-      <div className="bg-white rounded-xl shadow-sm p-5">
-        <h2 className="text-sm font-bold text-gray-800 mb-3">Auto-Sync (Recommended)</h2>
-        <p className="text-sm text-gray-600 mb-3">Set up a cron job to automatically sync every 5 minutes during match days:</p>
-        <div className="bg-gray-900 rounded-xl p-4 text-xs font-mono text-green-400 space-y-2 overflow-x-auto">
-          <p className="text-gray-500"># Add to your server's crontab (every 5 min)</p>
-          <p>*/5 * * * * curl -s "{typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4001'}/api/sync-scores?secret=local-dev" &gt; /dev/null</p>
-          <p className="text-gray-500 mt-3"># Or use Vercel Cron (vercel.json):</p>
-          <p>{`{
-  "crons": [{
-    "path": "/api/sync-scores",
-    "schedule": "*/5 * * * *"
-  }]
-}`}</p>
-        </div>
-        <p className="text-xs text-gray-400 mt-3">Set <code>CRON_SECRET</code> in .env.local to protect the endpoint in production.</p>
+      {/* Seed DB */}
+      <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-orange-400">
+        <h2 className="text-sm font-bold text-gray-800 mb-3">Seed Database (48 Teams + Matches)</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Upserts all 48 WC2026 teams and 72 group-stage matches. Safe to run multiple times.
+        </p>
+        <button
+          onClick={async () => {
+            setSeedStatus('syncing'); setSeedResult(null)
+            try {
+              const res = await fetch('/api/admin/seed-db', { method: 'POST' })
+              const data = await res.json()
+              setSeedResult(data)
+              setSeedStatus(data.ok ? 'done' : 'error')
+            } catch (e: any) { setSeedResult({ error: e.message }); setSeedStatus('error') }
+          }}
+          disabled={seedStatus === 'syncing'}
+          className="px-6 py-2.5 rounded-lg text-white font-semibold text-sm disabled:opacity-50 transition-colors"
+          style={{ background: seedStatus === 'done' ? '#166534' : '#b45309' }}
+        >
+          {seedStatus === 'syncing' ? 'Seeding...' : seedStatus === 'done' ? 'Done!' : 'Seed DB Now'}
+        </button>
+        {seedResult && (
+          <div className={`mt-4 p-4 rounded-xl text-sm ${seedResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            {seedResult.error
+              ? <p className="text-red-700"><strong>Error:</strong> {seedResult.error}</p>
+              : <p className="text-green-800">Teams: {seedResult.teams} | Matches created: {seedResult.created} | Updated: {seedResult.updated}</p>
+            }
+          </div>
+        )}
       </div>
     </div>
   )

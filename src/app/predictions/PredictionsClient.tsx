@@ -107,6 +107,7 @@ export default function PredictionsClient({
     )
   )
   const [jokerSaving, setJokerSaving] = useState<number | null>(null)
+  const [jokerError, setJokerError] = useState<string | null>(null)
 
   /* Prediction distribution popup */
   const [showDist, setShowDist] = useState<number | null>(null)
@@ -201,17 +202,14 @@ export default function PredictionsClient({
   async function toggleJoker(matchId: number, group: string) {
     const current = !!jokers[matchId]
     const newVal = !current
+    setJokerError(null)
+
     // Optimistically update UI
-    const sameGroupIds = matches.filter(m => m.group === group).map(m => m.id)
-    setJokers(prev => {
-      const next = { ...prev }
-      sameGroupIds.forEach(id => { next[id] = false })
-      if (newVal) next[matchId] = true
-      return next
-    })
+    setJokers(prev => ({ ...prev, [matchId]: newVal }))
     setJokerSaving(matchId)
+
     const p = preds[matchId] ?? { h: '0', a: '0' }
-    await fetch('/api/predictions', {
+    const res = await fetch('/api/predictions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -222,6 +220,15 @@ export default function PredictionsClient({
       }),
     })
     setJokerSaving(null)
+
+    if (!res.ok) {
+      // Revert optimistic update
+      setJokers(prev => ({ ...prev, [matchId]: current }))
+      const data = await res.json().catch(() => ({}))
+      setJokerError(data.error ?? 'Could not apply joker.')
+      setTimeout(() => setJokerError(null), 4000)
+      return
+    }
     refreshScores()
   }
 
@@ -328,6 +335,18 @@ export default function PredictionsClient({
               {tab === 0 && <div className="bg-white rounded-xl p-5 shadow-sm"><ScoringRules /></div>}
 
               {/* ── GO PREDICT SCORES ── */}
+              {/* Joker error toast — fixed overlay so it's always visible */}
+              {jokerError && (
+                <div style={{
+                  position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+                  background: '#b45309', color: '#fff', padding: '12px 24px', borderRadius: '12px',
+                  fontWeight: 600, fontSize: '14px', zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                  maxWidth: '90vw', textAlign: 'center',
+                }}>
+                  {jokerError}
+                </div>
+              )}
+
               {tab === 1 && (
                 <div id="predict" className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -449,12 +468,27 @@ export default function PredictionsClient({
                                           </div>
                                           {bonus.status === 'open' ? (
                                             <div className="flex gap-2">
-                                              <input type="text"
+                                              <select
                                                 value={bonusAnswers[m.id] ?? ''}
                                                 onChange={e => setBonusAnswers(s => ({ ...s, [m.id]: e.target.value }))}
-                                                placeholder="Player name…"
-                                                className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-400 min-w-0"
-                                              />
+                                                className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-400 min-w-0 bg-white"
+                                              >
+                                                <option value="">— Pick a player —</option>
+                                                {(m as any).homePlayers?.length > 0 && (
+                                                  <optgroup label={m.homeTeam.name}>
+                                                    {(m as any).homePlayers.map((name: string) => (
+                                                      <option key={name} value={name}>{name}</option>
+                                                    ))}
+                                                  </optgroup>
+                                                )}
+                                                {(m as any).awayPlayers?.length > 0 && (
+                                                  <optgroup label={m.awayTeam.name}>
+                                                    {(m as any).awayPlayers.map((name: string) => (
+                                                      <option key={name} value={name}>{name}</option>
+                                                    ))}
+                                                  </optgroup>
+                                                )}
+                                              </select>
                                               <button
                                                 onClick={() => saveBonusAnswer(m.id, bonus.questionId)}
                                                 disabled={bonusSaving === m.id || !bonusAnswers[m.id]?.trim()}
@@ -1145,10 +1179,10 @@ function ScoringRules() {
       {/* ── Score grid ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Exact score',           val: '5'  },
-          { label: 'Correct outcome only',  val: '3'  },
-          { label: 'Per correct team goals',val: '1'  },
-          { label: 'Joker multiplier',      val: '×2' },
+          { label: 'Exact score',            val: '5'  },
+          { label: 'Correct outcome',        val: '3'  },
+          { label: 'Wrong outcome, one team score correct', val: '1' },
+          { label: 'Joker multiplier',       val: 'x2' },
         ].map(({ label, val }) => (
           <div key={label} className="rounded-xl p-4 text-center text-white" style={{ background: '#1e3a5f' }}>
             <div className="text-xs text-gray-300 mb-1 leading-tight">{label}</div>
@@ -1159,8 +1193,8 @@ function ScoringRules() {
 
       {/* ── Bullet notes ── */}
       <ul className="text-sm text-gray-600 space-y-2 list-disc list-outside ml-5">
-        <li>Pick one joker per stage to multiply that match's points (see multiplier above).</li>
-        <li>Bonus questions add extra points when the official answer is confirmed — use the Bonus Points tab to answer them.</li>
+        <li>Pick one joker per stage to double that match's points.</li>
+        <li>Bonus questions add extra points when confirmed — answer them in the Bonus Points tab.</li>
       </ul>
 
       {/* ── Divider ── */}
@@ -1173,23 +1207,23 @@ function ScoringRules() {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr style={{ background: '#1e3a5f' }}>
-                <th className="text-left px-4 py-2.5 text-white text-xs font-semibold">Prediction</th>
-                <th className="text-left px-4 py-2.5 text-white text-xs font-semibold">Example</th>
+                <th className="text-left px-4 py-2.5 text-white text-xs font-semibold">Scenario</th>
+                <th className="text-left px-4 py-2.5 text-white text-xs font-semibold">Example (result vs. prediction)</th>
                 <th className="text-center px-4 py-2.5 text-yellow-400 text-xs font-semibold">Points</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {[
-                { pred: 'Exact score',               ex: 'Result 2-1, you predicted 2-1',       pts: '5' },
-                { pred: 'Correct outcome only',       ex: 'Result 2-1, you predicted 3-1',       pts: '3' },
-                { pred: 'One team correct, wrong result', ex: 'Result 2-1, you predicted 2-0',   pts: '1' },
-                { pred: 'Both teams correct, wrong result', ex: 'Result 2-1, you predicted 2-1 -- already exact', pts: '--' },
-                { pred: 'Wrong outcome',              ex: 'Result 2-1, you predicted 0-1',       pts: '0' },
+                { pred: 'Exact score',                        ex: 'Result 2-1 / Predicted 2-1',           pts: '5' },
+                { pred: 'Correct outcome, wrong score',       ex: 'Result 2-1 / Predicted 3-1 (home win)', pts: '3' },
+                { pred: 'Wrong outcome, home score correct',  ex: 'Result 2-1 / Predicted 2-2 (draw)',     pts: '1' },
+                { pred: 'Wrong outcome, away score correct',  ex: 'Result 2-1 / Predicted 0-1 (away win)', pts: '1' },
+                { pred: 'Wrong outcome, both scores wrong',   ex: 'Result 2-1 / Predicted 0-2 (away win)', pts: '0' },
               ].map(({ pred, ex, pts }) => (
                 <tr key={pred} className="hover:bg-gray-50">
                   <td className="px-4 py-2.5 text-xs font-medium text-gray-800">{pred}</td>
                   <td className="px-4 py-2.5 text-xs text-gray-500">{ex}</td>
-                  <td className="px-4 py-2.5 text-center text-xs font-black" style={{ color: pts === '0' || pts === '--' ? '#9ca3af' : '#1e3a5f' }}>{pts}</td>
+                  <td className="px-4 py-2.5 text-center text-xs font-black" style={{ color: pts === '0' ? '#9ca3af' : '#1e3a5f' }}>{pts}</td>
                 </tr>
               ))}
             </tbody>
@@ -1365,4 +1399,39 @@ function AudiencePollTab({
                           <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: bg }}>
                             <div
                               className="h-full rounded-full transition-all duration-500"
-                              st
+                              style={{ width: pct + '%', background: color }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {poll.status === 'open' && !poll.myVote && (
+                    <button
+                      onClick={async () => {
+                        const choice = selected[poll.id]
+                        if (!choice) return
+                        await onVote(poll.id, choice)
+                      }}
+                      disabled={!selected[poll.id] || voting[poll.id]}
+                      className="mt-5 w-full py-2.5 rounded-xl text-white font-bold text-sm disabled:opacity-40 transition-colors"
+                      style={{ background: '#1e3a5f' }}
+                    >
+                      {voting[poll.id] ? 'Submitting...' : 'Submit Vote'}
+                    </button>
+                  )}
+
+                  {poll.myVote && (
+                    <p className="mt-4 text-center text-xs text-green-600 font-semibold">
+                      You voted: {poll.myVote}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}

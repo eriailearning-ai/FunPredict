@@ -2,6 +2,7 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import PredictionsClient from './PredictionsClient'
 import { toIso2 } from '@/lib/flags'
+import { SQUADS } from '@/lib/squads'
 
 export const dynamic = 'force-dynamic'
 
@@ -114,12 +115,18 @@ export default async function PredictionsPage() {
       orderBy: { matchDate: 'asc' },
     }).catch(() => [])
 
-    matches = allMatches.map((m: any) => ({
-      ...m,
-      matchDate: m.matchDate.toISOString(),
-      homeTeam: { ...m.homeTeam, flag: toIso2(m.homeTeam.code) },
-      awayTeam: { ...m.awayTeam, flag: toIso2(m.awayTeam.code) },
-    }))
+    matches = allMatches.map((m: any) => {
+      const homePlayers = (SQUADS[m.homeTeam.code] ?? []).map((p: any) => p.name)
+      const awayPlayers = (SQUADS[m.awayTeam.code] ?? []).map((p: any) => p.name)
+      return {
+        ...m,
+        matchDate: m.matchDate.toISOString(),
+        homeTeam: { ...m.homeTeam, flag: toIso2(m.homeTeam.code) },
+        awayTeam: { ...m.awayTeam, flag: toIso2(m.awayTeam.code) },
+        homePlayers,
+        awayPlayers,
+      }
+    })
 
     const myPreds = await prisma.prediction.findMany({ where: { userId: user!.id } }).catch(() => [])
     predMap = Object.fromEntries(myPreds.map(p => [p.matchId, p]))
@@ -213,4 +220,13 @@ export default async function PredictionsPage() {
       userTotalPoints={userTotalPoints}
       userRank={userRank}
       topPerformers={topPerformers}
-      leagueScoreboards=
+      leagueScoreboards={leagueScoreboards}
+      groupAStandings={groupAStandings}
+      nextMatch={nextMatch}
+      comingUp={comingUp}
+      topScorers={topScorers}
+      bonusMap={bonusMap}
+      predDistMap={predDistMap}
+    />
+  )
+}

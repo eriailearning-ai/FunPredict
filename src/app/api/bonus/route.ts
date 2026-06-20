@@ -1,6 +1,6 @@
 /**
- * GET  /api/bonus   – list open bonus questions with user's answers
- * POST /api/bonus   – save user's answers (before deadline)
+ * GET  /api/bonus   - list official bonus questions (not per-match) with user answers
+ * POST /api/bonus   - save user answers (before deadline)
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
@@ -12,6 +12,7 @@ export async function GET() {
   let questions: any[] = []
   try {
     questions = await (prisma as any).bonusQuestion.findMany({
+      where: { NOT: { stage: { startsWith: 'm' } } },
       orderBy: { createdAt: 'asc' },
     })
   } catch {
@@ -40,7 +41,7 @@ export async function GET() {
       points: q.points,
       status: q.status,
       correctAnswer: q.status === 'answered' ? q.correctAnswer : null,
-      deadline: q.updatedAt, // use updatedAt as rough deadline proxy
+      deadline: q.deadline ?? q.updatedAt,
       myAnswer: myAnswer?.answer ?? null,
       myPoints: myAnswer?.points ?? null,
     }
@@ -55,14 +56,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
-  const { answers } = await req.json() // { [questionId]: string }
+  const { answers } = await req.json()
 
   let saved = 0
   for (const [qId, answer] of Object.entries(answers)) {
     const questionId = +qId
     try {
       const q = await (prisma as any).bonusQuestion.findUnique({ where: { id: questionId } })
-      if (!q || q.status !== 'open') continue // can't answer closed/answered questions
+      if (!q || q.status !== 'open') continue
 
       await (prisma as any).bonusAnswer.upsert({
         where: { userId_questionId: { userId: session.id, questionId } },

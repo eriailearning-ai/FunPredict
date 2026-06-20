@@ -5,6 +5,7 @@ type Q = { id: number; question: string; type: string; stage: string; options: s
 
 const STAGES = ['group', 'knockout', 'final', 'all']
 const TYPES = ['single', 'multiple']
+const STATUSES = ['open', 'closed', 'answered']
 const DEFAULT_OPTIONS = ['Option 1', 'Option 2', 'Option 3']
 
 export default function AdminBonusPage() {
@@ -103,7 +104,7 @@ export default function AdminBonusPage() {
               placeholder="Who will win the Golden Boot?" value={form.question}
               onChange={e => setForm(f => ({ ...f, question: e.target.value }))} />
           </div>
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
               <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
@@ -116,6 +117,13 @@ export default function AdminBonusPage() {
               <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
                 value={form.stage} onChange={e => setForm(f => ({ ...f, stage: e.target.value }))}>
                 {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+              <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
+                value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>

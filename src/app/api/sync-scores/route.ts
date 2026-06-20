@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { calcPoints } from '@/lib/scoring'
+import { requireAdmin } from '@/lib/auth'
 
 const WC2026_ID = 2000
 const API_KEY = process.env.FOOTBALL_DATA_API_KEY ?? ''
@@ -111,6 +112,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(result)
 }
 
-export async function POST(req: NextRequest) {
-  return GET(req)
+// Admin "Sync Now" button — uses session auth instead of cron secret
+export async function POST() {
+  await requireAdmin()
+  const result = await syncMatchResults()
+  return NextResponse.json(result)
 }

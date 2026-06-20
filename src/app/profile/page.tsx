@@ -5,7 +5,8 @@ import Navbar from '@/components/layout/Navbar'
 
 type Profile = {
   name: string; email: string; username: string
-  phone: string; nickname: string; league: string; cheeringFrom: string
+  phone: string; nickname: string; league: string
+  cheeringFrom: string; role: string
 }
 
 type Section = 'nickname' | 'phone' | 'email' | 'password' | null
@@ -17,13 +18,13 @@ export default function ProfilePage() {
   const [msg, setMsg]         = useState('')
   const [err, setErr]         = useState('')
 
-  // form fields
-  const [nickname, setNickname]         = useState('')
-  const [phone, setPhone]               = useState('')
-  const [email, setEmail]               = useState('')
-  const [currentPw, setCurrentPw]       = useState('')
-  const [newPw, setNewPw]               = useState('')
-  const [confirmPw, setConfirmPw]       = useState('')
+  const [nickname, setNickname] = useState('')
+  const [phone, setPhone]       = useState('')
+  const [email, setEmail]       = useState('')
+  // Admin-only password change
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw]         = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
 
   useEffect(() => {
     fetch('/api/profile').then(r => r.ok ? r.json() : null).then(d => {
@@ -56,27 +57,44 @@ export default function ProfilePage() {
       setTimeout(() => window.location.href = '/auth/login', 3500)
       return
     }
-    // Refresh profile
-    fetch('/api/profile').then(r => r.json()).then(d => { setProfile(d); setOpen(null) })
+    fetch('/api/profile').then(r => r.json()).then(d => {
+      setProfile(d)
+      setNickname(d.nickname)
+      setPhone(d.phone ?? '')
+      setEmail(d.email)
+      setOpen(null)
+    })
     setCurrentPw(''); setNewPw(''); setConfirmPw('')
   }
 
+  const navUser = profile
+    ? { name: profile.name, nickname: profile.nickname, role: profile.role }
+    : null
+
   if (!profile) return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+      <Navbar user={null} />
       <div className="flex items-center justify-center h-64 text-gray-400">Loading…</div>
     </div>
   )
 
+  const isAdmin = profile.role === 'admin'
   const fieldClass = "w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
   const btnPrimary = "px-5 py-2 rounded-xl text-white text-sm font-bold disabled:opacity-50 hover:opacity-90"
   const btnGhost   = "px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100"
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+      <Navbar user={navUser} />
       <div className="max-w-xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-black mb-1" style={{ color: '#1e3a5f' }}>My Profile</h1>
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-2xl font-black" style={{ color: '#1e3a5f' }}>My Profile</h1>
+          {isAdmin && (
+            <Link href="/admin" className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-yellow-100 text-yellow-800 hover:bg-yellow-200">
+              ⚙ Admin Panel
+            </Link>
+          )}
+        </div>
         <p className="text-sm text-gray-500 mb-6">Update your details below</p>
 
         {msg && <div className="mb-4 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl p-3">{msg}</div>}
@@ -101,13 +119,15 @@ export default function ProfilePage() {
             <span className="text-xs text-gray-400">Fixed</span>
           </div>
 
-          <div className="px-6 py-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">League</p>
-              <p className="text-sm font-semibold text-gray-800">{profile.league || '—'}</p>
+          {!isAdmin && (
+            <div className="px-6 py-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">League</p>
+                <p className="text-sm font-semibold text-gray-800">{profile.league || '—'}</p>
+              </div>
+              <span className="text-xs text-gray-400">Assigned by admin</span>
             </div>
-            <span className="text-xs text-gray-400">Assigned by admin</span>
-          </div>
+          )}
 
           {/* Nickname */}
           <div className="px-6 py-4">
@@ -167,7 +187,9 @@ export default function ProfilePage() {
             {open === 'email' && (
               <div className="mt-3 space-y-2">
                 <input className={fieldClass} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="new@example.com" />
-                <p className="text-xs text-amber-600">⚠ Changing your email will require re-verification and log you out.</p>
+                {!isAdmin && (
+                  <p className="text-xs text-amber-600">⚠ Changing your email will require re-verification and log you out.</p>
+                )}
                 <div className="flex gap-2">
                   <button className={btnGhost} onClick={() => toggle(null)}>Cancel</button>
                   <button className={btnPrimary} disabled={saving || email === profile.email} style={{ background: '#8b1c2c' }}
@@ -179,7 +201,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Password */}
+          {/* Password — everyone can change inline; forgot-password also available */}
           <div className="px-6 py-4">
             <div className="flex items-center justify-between cursor-pointer" onClick={() => toggle('password')}>
               <div>
@@ -205,14 +227,35 @@ export default function ProfilePage() {
                 {newPw && confirmPw && newPw !== confirmPw && (
                   <p className="text-xs text-red-500">Passwords do not match</p>
                 )}
+                <p className="text-xs text-gray-400 pt-1">
+                  Forgot your current password?{' '}
+                  <Link href="/auth/forgot-password" className="text-blue-600 hover:underline">Reset via email →</Link>
+                </p>
               </div>
             )}
           </div>
 
         </div>
 
+        {/* Scoring rules card */}
+        {!isAdmin && (
+          <div className="mt-6 bg-blue-50 border border-blue-100 rounded-2xl p-5">
+            <p className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-3">⚽ How Points Are Scored</p>
+            <div className="space-y-1.5 text-sm text-blue-700">
+              <div className="flex justify-between"><span>Exact score</span><strong>5 pts</strong></div>
+              <div className="flex justify-between"><span>Correct result (W/D/L)</span><strong>3 pts</strong></div>
+              <div className="flex justify-between"><span>Correct goals for one team</span><strong>1 pt</strong></div>
+              <div className="flex justify-between"><span>Joker match</span><strong>×2 pts</strong></div>
+            </div>
+            <p className="text-xs text-blue-500 mt-3">Points are calculated automatically when match results are confirmed.</p>
+          </div>
+        )}
+
         <div className="mt-6 text-center">
-          <Link href="/predictions" className="text-sm text-blue-600 hover:underline">← Back to predictions</Link>
+          {isAdmin
+            ? <Link href="/admin" className="text-sm text-blue-600 hover:underline">← Back to admin panel</Link>
+            : <Link href="/predictions" className="text-sm text-blue-600 hover:underline">← Back to predictions</Link>
+          }
         </div>
       </div>
     </div>

@@ -24,6 +24,7 @@ const NAV = [
   ]},
   { group: 'System', items: [
     { href: '/admin/settings', label: 'Settings', icon: '⚙️' },
+    { href: '/profile',        label: 'My Profile', icon: '👤' },
   ]},
 ]
 
@@ -72,7 +73,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <span>🏠</span> Public site
           </Link>
           <div className="pt-2 border-t border-blue-900">
-            <p className="text-xs text-blue-500 truncate">{(user as any).nickname || user.name}</p>
+            <Link href="/profile" className="text-xs text-blue-300 hover:text-white truncate block">
+              👤 {(user as any).nickname || user.name}
+            </Link>
             <form action="/api/auth/logout" method="POST">
               <button className="text-xs text-red-400 hover:text-red-300 mt-1">Logout</button>
             </form>
@@ -90,7 +93,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="flex items-center gap-3 text-sm">
             <Link href="/predictions" className="text-blue-600 hover:underline text-xs">← Player view</Link>
             <span className="text-gray-300">|</span>
-            <span className="text-gray-600 font-medium">{(user as any).nickname || user.name}</span>
+            <Link href="/profile" className="text-gray-600 font-medium hover:text-blue-700">
+              👤 {(user as any).nickname || user.name}
+            </Link>
           </div>
         </header>
 

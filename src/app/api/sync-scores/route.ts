@@ -100,7 +100,6 @@ async function syncMatchResults() {
     }
   } catch {}
 
-  // Save last sync timestamp
   await prisma.setting.upsert({
     where:  { key: 'last_sync_at' },
     create: { key: 'last_sync_at', value: new Date().toISOString() },
@@ -112,14 +111,13 @@ async function syncMatchResults() {
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('x-cron-secret') ?? req.nextUrl.searchParams.get('secret')
-  if (auth !== CRON_SECRET && process.env.NODE_ENV === 'production') {
+  if (auth !== CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const result = await syncMatchResults()
   return NextResponse.json(result)
 }
 
-// Admin "Sync Now" button — uses session auth instead of cron secret
 export async function POST() {
   await requireAdmin()
   const result = await syncMatchResults()

@@ -47,14 +47,14 @@ export async function POST(req: NextRequest) {
   }
 
   if (!user) {
-    if (isForm) return errRedirect('invalid')
-    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    if (isForm) return errRedirect('notfound')
+    return NextResponse.json({ error: 'No account found with those details' }, { status: 401 })
   }
 
   const passwordOk = await verifyPassword(password, user.password)
   if (!passwordOk) {
-    if (isForm) return errRedirect('invalid')
-    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    if (isForm) return errRedirect('wrongpw')
+    return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
   }
 
   if (user.status === 'pending') {

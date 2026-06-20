@@ -6,12 +6,14 @@ import Link from 'next/link'
 function LoginForm() {
   const params = useSearchParams()
   const verified = params.get('verified') === '1'
-  const errorMsg: Record<string, string> = {
-    invalid:  'Invalid username/email or password.',
-    pending:  'Please verify your email first.',
-    awaiting: 'Your account hasn\'t been approved yet. The admin has been notified — please try again later.',
-    denied:   'Your account was not approved. Contact the admin.',
-    expired:  'Verification link expired. Please register again.',
+  const errorMsg: Record<string, { text: string; hint?: string }> = {
+    notfound: { text: 'No account found with that email, username or phone.', hint: 'Double-check your details or register a new account.' },
+    wrongpw:  { text: 'Incorrect password.', hint: 'forgot-password' },
+    invalid:  { text: 'Invalid username/email or password.' },
+    pending:  { text: 'Please verify your email before logging in.', hint: 'Check your inbox (and spam folder) for the verification link.' },
+    awaiting: { text: "Your account hasn't been approved yet.", hint: 'The admin has been notified — please try again later.' },
+    denied:   { text: 'Your account was not approved.', hint: 'Contact the admin if you think this is a mistake.' },
+    expired:  { text: 'Verification link expired.', hint: 'Please register again.' },
   }
   const err = params.get('error')
 
@@ -56,11 +58,25 @@ function LoginForm() {
               ✅ Email verified! Waiting for admin approval before you can log in.
             </div>
           )}
-          {err && (
-            <div className="mb-4 bg-red-500/20 border border-red-400/40 text-red-200 p-3 rounded-xl text-sm font-medium">
-              {errorMsg[err] ?? `Login error: ${err}`}
-            </div>
-          )}
+          {err && (() => {
+            const e = errorMsg[err] ?? { text: 'Something went wrong. Please try again.' }
+            return (
+              <div className="mb-4 bg-red-500/20 border border-red-400/40 text-red-200 p-3 rounded-xl text-sm">
+                <p className="font-semibold">⚠ {e.text}</p>
+                {e.hint && e.hint !== 'forgot-password' && (
+                  <p className="mt-1 text-red-300 text-xs">{e.hint}</p>
+                )}
+                {e.hint === 'forgot-password' && (
+                  <p className="mt-1 text-xs text-red-300">
+                    Forgot it?{' '}
+                    <Link href="/auth/forgot-password" className="text-yellow-300 font-semibold hover:underline">
+                      Reset your password →
+                    </Link>
+                  </p>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Form card */}
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-7 shadow-2xl">

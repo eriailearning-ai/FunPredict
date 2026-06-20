@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     data: { resetToken: token, resetExpiry: expiry },
   })
 
-  const base = process.env.NEXTAUTH_URL ?? 'http://localhost:4001'
+  const base = process.env.NEXTAUTH_URL ?? new URL(req.url).origin
   const resetUrl = `${base}/auth/reset-password?token=${token}`
 
   if (emailEnabled()) {

@@ -12,3 +12,4 @@ _prisma_prebuilt/
 .env.local
 .env*.local
 prisma/dev.db
+.env*

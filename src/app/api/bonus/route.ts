@@ -1,6 +1,6 @@
 /**
  * GET  /api/bonus   - list official bonus questions (not per-match) with user answers
- * POST /api/bonus   - save user answers (before deadline)
+ * POST /api/bonus   - save user answers (while status is open)
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
@@ -15,7 +15,8 @@ export async function GET() {
       where: { NOT: { stage: { startsWith: 'm' } } },
       orderBy: { createdAt: 'asc' },
     })
-  } catch {
+  } catch (e: any) {
+    console.error('[bonus] GET failed:', e?.message)
     return NextResponse.json([])
   }
 
@@ -41,7 +42,7 @@ export async function GET() {
       points: q.points,
       status: q.status,
       correctAnswer: q.status === 'answered' ? q.correctAnswer : null,
-      deadline: q.deadline ?? q.updatedAt,
+      deadline: null,
       myAnswer: myAnswer?.answer ?? null,
       myPoints: myAnswer?.points ?? null,
     }

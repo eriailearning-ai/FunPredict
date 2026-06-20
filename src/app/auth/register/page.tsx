@@ -6,7 +6,7 @@ const LEAGUES = ['Aila Attackers', 'Sukuti Strikers', 'Gorkhali Gooners']
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
-    username: '', email: '', password: '', confirmPassword: '',
+    username: '', email: '', phone: '', password: '', confirmPassword: '',
     name: '', nickname: '', league: '', cheeringFrom: '',
   })
   const [error, setError] = useState('')
@@ -31,6 +31,7 @@ export default function RegisterPage() {
         username: form.username,
         name: form.name,
         email: form.email,
+        phone: form.phone,
         password: form.password,
         nickname: form.nickname,
         league: form.league,
@@ -138,6 +139,22 @@ export default function RegisterPage() {
                   onChange={set('email')}
                 />
               </div>
+            </div>
+
+            {/* Row 1b: Phone (optional) */}
+            <div>
+              <label className="block text-xs font-bold text-blue-200 uppercase tracking-wide mb-1.5">
+                Mobile Number <span className="text-blue-400 font-normal">(optional — for quick login)</span>
+              </label>
+              <input
+                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/25 text-white placeholder-blue-300 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                type="tel"
+                placeholder="e.g. +1 555 123 4567"
+                value={form.phone}
+                onChange={set('phone')}
+                autoComplete="tel"
+              />
+              <p className="text-xs text-blue-400 mt-1">You can use this number to log in instead of email</p>
             </div>
 
             {/* Row 2: Password + Confirm */}

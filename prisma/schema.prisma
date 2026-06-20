@@ -1,12 +1,11 @@
-// Local development schema — uses SQLite.
-// Vercel/production uses schema.postgres.prisma (copied over during build).
+// Uses PostgreSQL (Neon) for both local dev and production.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -17,6 +16,7 @@ model User {
   name          String
   email         String    @unique
   username      String?   @unique
+  phone         String?   @unique
   nickname      String    @default("")
   league        String    @default("")
   leagueId      Int?

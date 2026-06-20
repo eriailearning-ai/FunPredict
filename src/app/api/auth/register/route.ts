@@ -7,12 +7,13 @@ import { z } from 'zod'
 const LEAGUES = ['Aila Attackers', 'Sukuti Strikers', 'Gorkhali Gooners']
 
 const schema = z.object({
-  username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, underscores'),
-  name: z.string().min(2).max(60),
-  email: z.string().email(),
-  password: z.string().min(8),
-  nickname: z.string().min(2).max(40),
-  league: z.string().refine(v => LEAGUES.includes(v), { message: 'Invalid league' }),
+  username:     z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, underscores'),
+  name:         z.string().min(2).max(60),
+  email:        z.string().email(),
+  phone:        z.string().max(20).optional().default(''),
+  password:     z.string().min(8),
+  nickname:     z.string().min(2).max(40),
+  league:       z.string().refine(v => LEAGUES.includes(v), { message: 'Invalid league' }),
   cheeringFrom: z.string().max(60).optional().default(''),
 })
 
@@ -26,21 +27,27 @@ export async function POST(req: NextRequest) {
     const existingUsername = await prisma.user.findUnique({ where: { username: body.username } })
     if (existingUsername) return NextResponse.json({ error: 'Username already taken' }, { status: 400 })
 
+    if (body.phone) {
+      const existingPhone = await prisma.user.findUnique({ where: { phone: body.phone } })
+      if (existingPhone) return NextResponse.json({ error: 'Phone number already registered' }, { status: 400 })
+    }
+
     const token = generateToken()
     const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
     await prisma.user.create({
       data: {
-        name: body.name,
-        email: body.email,
-        username: body.username,
-        nickname: body.nickname,
-        league: body.league,
+        name:         body.name,
+        email:        body.email,
+        username:     body.username,
+        phone:        body.phone || null,
+        nickname:     body.nickname,
+        league:       body.league,
         cheeringFrom: body.cheeringFrom ?? '',
-        password: await hashPassword(body.password),
-        verifyToken: token,
+        password:     await hashPassword(body.password),
+        verifyToken:  token,
         verifyExpiry: expiry,
-        status: 'pending',
+        status:       'pending',
       },
     })
 
@@ -48,16 +55,14 @@ export async function POST(req: NextRequest) {
     const verifyUrl = base + '/auth/verify?token=' + token
 
     if (emailEnabled()) {
-      // Production — send real email
       await sendEmail(
         body.email,
-        '⚽ Verify your FIFAFun 2026 email',
+        'Verify your FIFAFun 2026 email',
         verifyEmailHtml(body.name, verifyUrl),
       )
       return NextResponse.json({ ok: true })
     }
 
-    // Local / dev — SMTP not configured, return URL so the register page shows it
     return NextResponse.json({ ok: true, local: true, verifyUrl })
   } catch (e: any) {
     if (e?.name === 'ZodError') {

@@ -4,57 +4,53 @@ import { verifyPassword, createSession } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   const contentType = req.headers.get('content-type') ?? ''
-  let email = '', password = ''
+  let identifier = '', password = ''
 
   try {
     if (contentType.includes('application/json')) {
       const body = await req.json()
-      email = body.email ?? body.identifier ?? body.username ?? ''
+      identifier = body.identifier ?? body.email ?? body.username ?? ''
       password = body.password ?? ''
     } else {
-      // application/x-www-form-urlencoded
       const text = await req.text()
       const params = new URLSearchParams(text)
-      email = params.get('identifier') ?? params.get('email') ?? params.get('username') ?? ''
+      identifier = params.get('identifier') ?? params.get('email') ?? params.get('username') ?? ''
       password = params.get('password') ?? ''
     }
   } catch (e) {
     console.error('Body parse error:', e)
   }
 
-  console.log('[login] identifier:', email, '| contentType:', contentType)
+  console.log('[login] identifier:', identifier, '| contentType:', contentType)
 
   const isForm = !contentType.includes('application/json')
   const loginUrl = new URL('/auth/login', req.url)
 
   function errRedirect(code: string) {
-    console.log('[login] error redirect:', code)
     loginUrl.searchParams.set('error', code)
     return NextResponse.redirect(loginUrl)
   }
 
-  if (!email) {
+  if (!identifier) {
     if (isForm) return errRedirect('invalid')
-    return NextResponse.json({ error: 'Username or email required' }, { status: 400 })
+    return NextResponse.json({ error: 'Username, email or phone required' }, { status: 400 })
   }
 
-  // Support login by email OR username
+  // Support login by email OR username OR phone
   const user = await prisma.user.findFirst({
-    where: { OR: [{ email }, { username: email }] },
+    where: { OR: [{ email: identifier }, { username: identifier }, { phone: identifier }] },
   })
   console.log('[login] user found:', !!user, '| status:', user?.status)
 
   if (!user) {
     if (isForm) return errRedirect('invalid')
-    return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
   const passwordOk = await verifyPassword(password, user.password)
-  console.log('[login] passwordOk:', passwordOk)
-
   if (!passwordOk) {
     if (isForm) return errRedirect('invalid')
-    return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
   if (user.status === 'pending') {
@@ -70,7 +66,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Your account was not approved' }, { status: 403 })
   }
 
-  console.log('[login] success! creating session for', user.email)
   const token = await createSession(user.id)
   const dest = user.role === 'admin' ? '/admin' : '/predictions'
   const maxAge = 30 * 24 * 60 * 60
@@ -79,7 +74,6 @@ export async function POST(req: NextRequest) {
   if (isForm) {
     const res = NextResponse.redirect(new URL(dest, req.url), 303)
     res.headers.set('Set-Cookie', cookie)
-    console.log('[login] redirecting to', dest)
     return res
   }
 

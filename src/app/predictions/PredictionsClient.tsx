@@ -468,7 +468,7 @@ export default function PredictionsClient({
                                               2 pts
                                             </span>
                                           </div>
-                                          {bonus.status === 'open' ? (
+                                          {bonus.status === 'open' && !locked ? (
                                             <div className="flex gap-2">
                                               <select
                                                 value={bonusAnswers[m.id] ?? ''}
@@ -509,11 +509,10 @@ export default function PredictionsClient({
                                                 <p className="text-xs text-gray-400 italic">No answer submitted</p>
                                               )}
                                               <p className="text-xs text-gray-400">
-                                                Closed
-                                                {bonus.points !== null
-                                                  ? ` · points awarded: ${bonus.points} points`
-                                                  : ' · Pending grading'}
-                                                {bonus.correctAnswer ? ` · correct: ${bonus.correctAnswer}` : ''}
+                                                {locked && bonus.status === 'open'
+                                                  ? 'Locked — match starting soon'
+                                                  : `Closed${bonus.points !== null ? ` · points awarded: ${bonus.points} points` : ' · Pending grading'}${bonus.correctAnswer ? ` · correct: ${bonus.correctAnswer}` : ''}`
+                                                }
                                               </p>
                                             </div>
                                           )}

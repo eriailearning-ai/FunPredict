@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
         },
       })
     } catch {
-      // Fallback: phone column not in DB yet
+      // Fallback: phone column not in DB yet — create without phone
       user = await prisma.user.create({
         data: {
           name:         body.name,
@@ -76,34 +76,39 @@ export async function POST(req: NextRequest) {
     }
 
     const base = process.env.NEXTAUTH_URL ?? 'http://localhost:4001'
-    const verifyUrl = base + '/auth/verify?token=' + token
+    // NOTE: points to /api/auth/verify (the API route handler), not /auth/verify (a page)
+    const verifyUrl = base + '/api/auth/verify?token=' + token
 
     if (emailEnabled()) {
       // 1. Send verify email to player
       await sendEmail(body.email, 'Verify your FIFAFun 2026 email', verifyEmailHtml(body.name, verifyUrl))
 
       // 2. Send approve/deny email to all admins
-      const approveUrl = base + '/api/admin/quick-action?token=' + createActionToken(user.id, 'approve')
-      const denyUrl    = base + '/api/admin/quick-action?token=' + createActionToken(user.id, 'deny')
-      const adminPanel = base + '/admin/users'
-      const admins = await prisma.user.findMany({ where: { role: 'admin' } })
-      for (const admin of admins) {
-        await sendEmail(
-          admin.email,
-          `[FIFAFun] New registration: ${body.name} — waiting for approval`,
-          adminApprovalEmailHtml(
-            body.name,
-            body.email,
-            body.username,
-            body.nickname,
-            body.league,
-            body.cheeringFrom ?? '',
-            body.phone ?? '',
-            approveUrl,
-            denyUrl,
-            adminPanel,
-          ),
-        ).catch(() => {})
+      try {
+        const approveUrl = base + '/api/admin/quick-action?token=' + createActionToken(user.id, 'approve')
+        const denyUrl    = base + '/api/admin/quick-action?token=' + createActionToken(user.id, 'deny')
+        const adminPanel = base + '/admin/users'
+        const admins = await prisma.user.findMany({ where: { role: 'admin' } })
+        for (const admin of admins) {
+          await sendEmail(
+            admin.email,
+            `[FIFAFun] New registration: ${body.name} — waiting for approval`,
+            adminApprovalEmailHtml(
+              body.name,
+              body.email,
+              body.username,
+              body.nickname,
+              body.league,
+              body.cheeringFrom ?? '',
+              body.phone ?? '',
+              approveUrl,
+              denyUrl,
+              adminPanel,
+            ),
+          ).catch(() => {})
+        }
+      } catch (adminEmailErr) {
+        console.error('[register] Admin email failed:', adminEmailErr)
       }
 
       return NextResponse.json({ ok: true })

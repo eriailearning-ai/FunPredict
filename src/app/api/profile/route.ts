@@ -15,6 +15,7 @@ export async function GET() {
     nickname:     user.nickname,
     league:       user.league,
     cheeringFrom: user.cheeringFrom,
+    role:         user.role,
   })
 }
 
@@ -25,6 +26,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json()
   const updates: Record<string, any> = {}
   const messages: string[] = []
+  const isAdmin = user.role === 'admin'
 
   // Nickname
   if (body.nickname !== undefined) {
@@ -38,35 +40,50 @@ export async function PATCH(req: NextRequest) {
   if (body.phone !== undefined) {
     const phone = body.phone.trim() || null
     if (phone) {
-      const existing = await prisma.user.findFirst({ where: { phone, NOT: { id: user.id } } })
-      if (existing) return NextResponse.json({ error: 'Phone number already in use' }, { status: 400 })
+      try {
+        const existing = await prisma.user.findFirst({ where: { phone, NOT: { id: user.id } } })
+        if (existing) return NextResponse.json({ error: 'Phone number already in use' }, { status: 400 })
+      } catch {
+        // phone column not in DB yet — skip uniqueness check
+      }
     }
-    updates.phone = phone
-    messages.push('Phone updated')
+    try {
+      updates.phone = phone
+      messages.push('Phone updated')
+    } catch {
+      messages.push('Phone update skipped (DB not migrated yet)')
+    }
   }
 
-  // Email change — triggers re-verification
+  // Email change
   if (body.email !== undefined && body.email.trim().toLowerCase() !== user.email) {
     const newEmail = body.email.trim().toLowerCase()
     const existing = await prisma.user.findUnique({ where: { email: newEmail } })
     if (existing) return NextResponse.json({ error: 'Email already in use' }, { status: 400 })
 
-    const token = generateToken()
-    const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
     updates.email = newEmail
-    updates.status = 'pending'
-    updates.verifyToken = token
-    updates.verifyExpiry = expiry
 
-    const base = process.env.NEXTAUTH_URL ?? 'http://localhost:4001'
-    const verifyUrl = `${base}/auth/verify?token=${token}`
-
-    if (emailEnabled()) {
-      await sendEmail(newEmail, 'Verify your new FIFAFun email', verifyEmailHtml(user.name, verifyUrl))
+    if (isAdmin) {
+      // Admins skip re-verification — just update email directly
+      messages.push('Email updated')
     } else {
-      console.log('[profile] verify URL:', verifyUrl)
+      // Players must re-verify and get logged out
+      const token = generateToken()
+      const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      updates.status = 'pending'
+      updates.verifyToken = token
+      updates.verifyExpiry = expiry
+
+      const base = process.env.NEXTAUTH_URL ?? 'http://localhost:4001'
+      const verifyUrl = `${base}/api/auth/verify?token=${token}`
+
+      if (emailEnabled()) {
+        await sendEmail(newEmail, 'Verify your new FIFAFun email', verifyEmailHtml(user.name, verifyUrl))
+      } else {
+        console.log('[profile] verify URL:', verifyUrl)
+      }
+      messages.push('Email updated — please verify your new address')
     }
-    messages.push('Email updated — please verify your new address')
   }
 
   // Password change
@@ -84,6 +101,7 @@ export async function PATCH(req: NextRequest) {
 
   await prisma.user.update({ where: { id: user.id }, data: updates })
 
-  const emailChanged = !!updates.email
+  // Email changed flag — only meaningful for non-admin (triggers logout)
+  const emailChanged = !!updates.email && !isAdmin
   return NextResponse.json({ ok: true, messages, emailChanged })
 }

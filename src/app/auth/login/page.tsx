@@ -9,7 +9,7 @@ function LoginForm() {
   const errorMsg: Record<string, string> = {
     invalid:  'Invalid username/email or password.',
     pending:  'Please verify your email first.',
-    awaiting: 'Your account is awaiting admin approval.',
+    awaiting: 'Your account hasn\'t been approved yet. The admin has been notified — please try again later.',
     denied:   'Your account was not approved. Contact the admin.',
     expired:  'Verification link expired. Please register again.',
   }

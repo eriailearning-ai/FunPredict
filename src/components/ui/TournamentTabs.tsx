@@ -32,7 +32,9 @@ export default function TournamentTabs({ matches }: { matches: MatchRow[] }) {
   const { byDay, dayKeys } = useMemo(() => {
     const acc: Record<string, MatchRow[]> = {}
     for (const m of matches) {
-      const day = new Date(m.matchDate).toISOString().slice(0, 10)
+      // Use LOCAL date so matches don't slip into the wrong day due to UTC offset
+      const d = new Date(m.matchDate)
+      const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       if (!acc[day]) acc[day] = []
       acc[day].push(m)
     }

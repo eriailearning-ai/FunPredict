@@ -74,13 +74,14 @@ export default function SiteBanner({ height = '350px', showLogo = true }: Props)
         <Link
           href="/"
           className="absolute"
-          style={{ top: '-30px', left: 20, zIndex: 60 }}
+          style={{ top: 'clamp(-20px, -2vw, -30px)', left: 20, zIndex: 60 }}
           aria-label="Home"
         >
-          {/* Mobile: 90×60  |  desktop: 180×120 */}
+          {/* Mobile: 75×75 (original square) | lg+: 180×110 (landscape) */}
           <div
-            className="bg-white shadow-2xl overflow-hidden flex items-center justify-center"
-            style={{ width: 180, height: 110, borderRadius: 16, border: '3px solid white', padding: 6 }}
+            className="bg-white shadow-2xl overflow-hidden flex items-center justify-center
+                       w-[75px] h-[75px] lg:w-[180px] lg:h-[110px]"
+            style={{ borderRadius: 16, border: '3px solid white', padding: 4 }}
           >
             <img
               src="/images/logo/cropped-worldcup-eagle-logo-1.png"

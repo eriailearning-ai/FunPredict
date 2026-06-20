@@ -35,10 +35,7 @@ export default function Navbar({ user, visitStats }: Props) {
           {/* Space reserved for the logo overlay that sits in the SiteBanner (desktop) */}
           <div className="flex-shrink-0 w-[200px] hidden lg:block" />
 
-          {/* Mobile-only brand text (logo overlay is in the banner below) */}
-          <Link href="/" className="lg:hidden flex-shrink-0 text-sm font-bold" style={{ color: '#1e3a5f' }}>
-            FIFAFun <span style={{ color: '#8b1c2c' }}>2⚽26</span>
-          </Link>
+          {/* Brand text — hidden on all viewports (logo in banner serves as branding) */}
 
           {/* Desktop nav */}
           <div className="hidden lg:flex items-center gap-0.5 flex-1 text-sm font-medium">

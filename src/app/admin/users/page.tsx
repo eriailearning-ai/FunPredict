@@ -7,6 +7,8 @@ type User = {
   status: string; role: string; createdAt: string
 }
 
+type DeleteTarget = { id: string; name: string } | null
+
 const STATUS_COLORS: Record<string, string> = {
   pending:  'bg-gray-100 text-gray-600',
   verified: 'bg-yellow-100 text-yellow-700',
@@ -26,6 +28,9 @@ export default function AdminUsersPage() {
   // Verify-link modal state
   const [verifyLink, setVerifyLink] = useState<{ name: string; url: string; sent: boolean } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteErr, setDeleteErr] = useState('')
 
   async function load() {
     setLoading(true)
@@ -57,6 +62,21 @@ export default function AdminUsersPage() {
     await navigator.clipboard.writeText(url).catch(() => {})
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function deleteUser() {
+    if (!deleteTarget) return
+    setDeleting(true); setDeleteErr('')
+    const res = await fetch('/api/admin/users', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: deleteTarget.id }),
+    })
+    const data = await res.json()
+    setDeleting(false)
+    if (!res.ok) { setDeleteErr(data.error); return }
+    setDeleteTarget(null)
+    load()
   }
 
   useEffect(() => { load() }, [])
@@ -153,6 +173,32 @@ export default function AdminUsersPage() {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete confirm modal ── */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="text-center mb-4">
+              <div className="text-4xl mb-3">🗑️</div>
+              <h2 className="text-lg font-black text-gray-900">Delete player?</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                This will permanently delete <strong>{deleteTarget.name}</strong> and all their predictions, bonus answers, and activity. This cannot be undone.
+              </p>
+            </div>
+            {deleteErr && <p className="text-red-500 text-xs text-center mb-3">{deleteErr}</p>}
+            <div className="flex gap-3">
+              <button onClick={() => { setDeleteTarget(null); setDeleteErr('') }}
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 text-sm font-semibold text-gray-700 hover:bg-gray-200">
+                Cancel
+              </button>
+              <button onClick={deleteUser} disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50">
+                {deleting ? 'Deleting…' : 'Yes, Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -314,6 +360,13 @@ export default function AdminUsersPage() {
                         {u.role === 'admin' && (
                           <button onClick={() => act(u.id, 'make_player')} disabled={!!acting}
                             className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-50">Demote</button>
+                        )}
+                        {u.role !== 'admin' && (
+                          <button onClick={() => setDeleteTarget({ id: u.id, name: u.name })}
+                            className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 ml-1"
+                            title="Delete player">
+                            🗑
+                          </button>
                         )}
                       </div>
                     </td>

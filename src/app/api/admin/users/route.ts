@@ -93,3 +93,18 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ ok: true })
 }
+
+export async function DELETE(req: NextRequest) {
+  const admin = await requireAdmin()
+  const { userId } = await req.json()
+  if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+  if (userId === admin.id) return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
+
+  const user = await prisma.user.findUnique({ where: { id: userId } })
+  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  if (user.role === 'admin') return NextResponse.json({ error: 'Cannot delete an admin account' }, { status: 400 })
+
+  // Cascade is handled by Prisma schema (onDelete: Cascade on all relations)
+  await prisma.user.delete({ where: { id: userId } })
+  return NextResponse.json({ ok: true })
+}

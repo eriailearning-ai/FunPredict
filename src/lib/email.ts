@@ -3,9 +3,12 @@ import nodemailer from 'nodemailer'
 /* ─── Transport ────────────────────────────────────────────── */
 function makeTransport() {
   return nodemailer.createTransport({
-    host:   process.env.EMAIL_SERVER_HOST,
-    port:   Number(process.env.EMAIL_SERVER_PORT ?? 587),
-    secure: Number(process.env.EMAIL_SERVER_PORT) === 465,
+    host:              process.env.EMAIL_SERVER_HOST,
+    port:              Number(process.env.EMAIL_SERVER_PORT ?? 587),
+    secure:            Number(process.env.EMAIL_SERVER_PORT) === 465,
+    connectionTimeout: 10_000,   // 10 s to connect
+    greetingTimeout:   10_000,   // 10 s for SMTP greeting
+    socketTimeout:     15_000,   // 15 s per socket operation
     auth: {
       user: process.env.EMAIL_SERVER_USER,
       pass: process.env.EMAIL_SERVER_PASSWORD,

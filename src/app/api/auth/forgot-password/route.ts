@@ -46,7 +46,12 @@ export async function POST(req: NextRequest) {
   const resetUrl = `${base}/auth/reset-password?token=${token}`
 
   if (emailEnabled()) {
-    await sendEmail(user.email, 'Reset your FIFAFun password', resetEmailHtml(user.name, resetUrl))
+    try {
+      await sendEmail(user.email, 'Reset your FIFAFun password', resetEmailHtml(user.name, resetUrl))
+    } catch (emailErr) {
+      console.error('[forgot-password] Email send failed:', emailErr)
+      // Token is saved — return success anyway so the page doesn't hang
+    }
   } else {
     console.log('[forgot-password] reset URL:', resetUrl)
   }

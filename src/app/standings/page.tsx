@@ -6,85 +6,11 @@ import StandingsTabs from '@/components/ui/StandingsTabs'
 import type { StandingGroup } from '@/components/ui/StandingsTabs'
 import { getSidebarData } from '@/lib/sidebar'
 import { getSession } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+import { toIso2 } from '@/lib/flags'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
-
-// FIFA World Cup 2026 — standings as of June 19, 2026
-const GROUPS: StandingGroup[] = [
-  { group: 'A', teams: [
-    { flag: 'mx', name: 'Mexico',       mp:1, w:1, d:0, l:0, gf:2, ga:0, gd: 2, pts:3 },
-    { flag: 'kr', name: 'South Korea',  mp:1, w:1, d:0, l:0, gf:2, ga:1, gd: 1, pts:3 },
-    { flag: 'cz', name: 'Czechia',      mp:1, w:0, d:0, l:1, gf:1, ga:2, gd:-1, pts:0 },
-    { flag: 'za', name: 'South Africa', mp:1, w:0, d:0, l:1, gf:0, ga:2, gd:-2, pts:0 },
-  ]},
-  { group: 'B', teams: [
-    { flag: 'ca', name: 'Canada',             mp:1, w:0, d:1, l:0, gf:1, ga:1, gd:0, pts:1 },
-    { flag: 'ba', name: 'Bosnia-Herzegovina', mp:1, w:0, d:1, l:0, gf:1, ga:1, gd:0, pts:1 },
-    { flag: 'qa', name: 'Qatar',              mp:1, w:0, d:1, l:0, gf:1, ga:1, gd:0, pts:1 },
-    { flag: 'ch', name: 'Switzerland',        mp:1, w:0, d:1, l:0, gf:1, ga:1, gd:0, pts:1 },
-  ]},
-  { group: 'C', teams: [
-    { flag: 'gb-sct', name: 'Scotland', mp:1, w:1, d:0, l:0, gf:1, ga:0, gd: 1, pts:3 },
-    { flag: 'ma',     name: 'Morocco',  mp:1, w:0, d:1, l:0, gf:1, ga:1, gd: 0, pts:1 },
-    { flag: 'br',     name: 'Brazil',   mp:1, w:0, d:1, l:0, gf:1, ga:1, gd: 0, pts:1 },
-    { flag: 'ht',     name: 'Haiti',    mp:1, w:0, d:0, l:1, gf:0, ga:1, gd:-1, pts:0 },
-  ]},
-  { group: 'D', teams: [
-    { flag: 'us', name: 'United States', mp:1, w:1, d:0, l:0, gf:4, ga:1, gd: 3, pts:3 },
-    { flag: 'au', name: 'Australia',     mp:1, w:1, d:0, l:0, gf:2, ga:0, gd: 2, pts:3 },
-    { flag: 'tr', name: 'Türkiye',       mp:1, w:0, d:0, l:1, gf:0, ga:2, gd:-2, pts:0 },
-    { flag: 'py', name: 'Paraguay',      mp:1, w:0, d:0, l:1, gf:1, ga:4, gd:-3, pts:0 },
-  ]},
-  { group: 'E', teams: [
-    { flag: 'de', name: 'Germany',     mp:1, w:1, d:0, l:0, gf:7, ga:1, gd: 6, pts:3 },
-    { flag: 'ci', name: 'Ivory Coast', mp:1, w:1, d:0, l:0, gf:1, ga:0, gd: 1, pts:3 },
-    { flag: 'ec', name: 'Ecuador',     mp:1, w:0, d:0, l:1, gf:0, ga:1, gd:-1, pts:0 },
-    { flag: 'cw', name: 'Curaçao',     mp:1, w:0, d:0, l:1, gf:1, ga:7, gd:-6, pts:0 },
-  ]},
-  { group: 'F', teams: [
-    { flag: 'se', name: 'Sweden',      mp:1, w:1, d:0, l:0, gf:5, ga:1, gd: 4, pts:3 },
-    { flag: 'jp', name: 'Japan',       mp:1, w:0, d:1, l:0, gf:2, ga:2, gd: 0, pts:1 },
-    { flag: 'nl', name: 'Netherlands', mp:1, w:0, d:1, l:0, gf:2, ga:2, gd: 0, pts:1 },
-    { flag: 'tn', name: 'Tunisia',     mp:1, w:0, d:0, l:1, gf:1, ga:5, gd:-4, pts:0 },
-  ]},
-  { group: 'G', teams: [
-    { flag: 'nz', name: 'New Zealand', mp:1, w:0, d:1, l:0, gf:2, ga:2, gd:0, pts:1 },
-    { flag: 'ir', name: 'Iran',        mp:1, w:0, d:1, l:0, gf:2, ga:2, gd:0, pts:1 },
-    { flag: 'eg', name: 'Egypt',       mp:1, w:0, d:1, l:0, gf:1, ga:1, gd:0, pts:1 },
-    { flag: 'be', name: 'Belgium',     mp:1, w:0, d:1, l:0, gf:1, ga:1, gd:0, pts:1 },
-  ]},
-  { group: 'H', teams: [
-    { flag: 'sa', name: 'Saudi Arabia', mp:1, w:0, d:1, l:0, gf:1, ga:1, gd:0, pts:1 },
-    { flag: 'uy', name: 'Uruguay',      mp:1, w:0, d:1, l:0, gf:1, ga:1, gd:0, pts:1 },
-    { flag: 'es', name: 'Spain',        mp:1, w:0, d:1, l:0, gf:0, ga:0, gd:0, pts:1 },
-    { flag: 'cv', name: 'Cabo Verde',   mp:1, w:0, d:1, l:0, gf:0, ga:0, gd:0, pts:1 },
-  ]},
-  { group: 'I', teams: [
-    { flag: 'no', name: 'Norway',  mp:1, w:1, d:0, l:0, gf:4, ga:1, gd: 3, pts:3 },
-    { flag: 'fr', name: 'France',  mp:1, w:1, d:0, l:0, gf:3, ga:1, gd: 2, pts:3 },
-    { flag: 'sn', name: 'Senegal', mp:1, w:0, d:0, l:1, gf:1, ga:3, gd:-2, pts:0 },
-    { flag: 'iq', name: 'Iraq',    mp:1, w:0, d:0, l:1, gf:1, ga:4, gd:-3, pts:0 },
-  ]},
-  { group: 'J', teams: [
-    { flag: 'ar', name: 'Argentina', mp:1, w:1, d:0, l:0, gf:3, ga:0, gd: 3, pts:3 },
-    { flag: 'at', name: 'Austria',   mp:1, w:1, d:0, l:0, gf:3, ga:1, gd: 2, pts:3 },
-    { flag: 'jo', name: 'Jordan',    mp:1, w:0, d:0, l:1, gf:1, ga:3, gd:-2, pts:0 },
-    { flag: 'dz', name: 'Algeria',   mp:1, w:0, d:0, l:1, gf:0, ga:3, gd:-3, pts:0 },
-  ]},
-  { group: 'K', teams: [
-    { flag: 'pt', name: 'Portugal',   mp:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 },
-    { flag: 'cd', name: 'DR Congo',   mp:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 },
-    { flag: 'uz', name: 'Uzbekistan', mp:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 },
-    { flag: 'co', name: 'Colombia',   mp:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 },
-  ]},
-  { group: 'L', teams: [
-    { flag: 'gb-eng', name: 'England', mp:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 },
-    { flag: 'hr',     name: 'Croatia', mp:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 },
-    { flag: 'gh',     name: 'Ghana',   mp:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 },
-    { flag: 'pa',     name: 'Panama',  mp:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 },
-  ]},
-]
 
 export default async function StandingsPage() {
   const session = await getSession().catch(() => null)
@@ -92,6 +18,64 @@ export default async function StandingsPage() {
   const userLeague = (session as any)?.league ?? ''
   const sidebarData = await getSidebarData({ userLeague: session ? userLeague : '', isAdmin })
     .catch(() => ({ topPerformers: [], nextMatch: null, comingUp: null, groupAStandings: [], topScorers: [] }))
+
+  // Load all group-stage teams and finished matches from DB
+  const [teams, matches] = await Promise.all([
+    prisma.team.findMany({ where: { group: { not: null } }, orderBy: { group: 'asc' } }).catch(() => []),
+    prisma.match.findMany({
+      where: { stage: 'group', status: 'finished' },
+      include: { homeTeam: true, awayTeam: true },
+    }).catch(() => []),
+  ])
+
+  // Build tally per team
+  type Tally = { code: string; name: string; group: string; mp: number; w: number; d: number; l: number; gf: number; ga: number }
+  const tally: Record<number, Tally> = {}
+  for (const t of teams) {
+    tally[t.id] = { code: t.code, name: t.name, group: t.group ?? '', mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 }
+  }
+  for (const m of matches) {
+    if (m.homeScore === null || m.awayScore === null) continue
+    const hs = m.homeScore, as_ = m.awayScore
+    if (tally[m.homeTeamId]) {
+      tally[m.homeTeamId].mp++
+      tally[m.homeTeamId].gf += hs; tally[m.homeTeamId].ga += as_
+      if (hs > as_) tally[m.homeTeamId].w++
+      else if (hs === as_) tally[m.homeTeamId].d++
+      else tally[m.homeTeamId].l++
+    }
+    if (tally[m.awayTeamId]) {
+      tally[m.awayTeamId].mp++
+      tally[m.awayTeamId].gf += as_; tally[m.awayTeamId].ga += hs
+      if (as_ > hs) tally[m.awayTeamId].w++
+      else if (as_ === hs) tally[m.awayTeamId].d++
+      else tally[m.awayTeamId].l++
+    }
+  }
+
+  // Group teams into StandingGroup[]
+  const byGroup: Record<string, Tally[]> = {}
+  for (const t of Object.values(tally)) {
+    if (!t.group) continue
+    if (!byGroup[t.group]) byGroup[t.group] = []
+    byGroup[t.group].push(t)
+  }
+
+  const GROUPS: StandingGroup[] = Object.keys(byGroup).sort().map(g => ({
+    group: g,
+    teams: byGroup[g]
+      .map(t => ({
+        flag: toIso2(t.code),
+        name: t.name,
+        mp: t.mp, w: t.w, d: t.d, l: t.l,
+        gf: t.gf, ga: t.ga,
+        gd: t.gf - t.ga,
+        pts: t.w * 3 + t.d,
+      }))
+      .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf),
+  }))
+
+  const now = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>
@@ -109,8 +93,7 @@ export default async function StandingsPage() {
           <main className="flex-1 min-w-0">
             <StandingsTabs groups={GROUPS} />
             <p className="text-xs text-gray-400 mt-4 text-center">
-              Updated June 19, 2026 ·{' '}
-              <a href="https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/standings" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">Source: FIFA.com</a>
+              Live from database · Updated {now}
             </p>
           </main>
 

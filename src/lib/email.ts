@@ -111,6 +111,7 @@ export function adminApprovalEmailHtml(
   playerNickname: string,
   playerLeague: string,
   playerCheering: string,
+  playerPhone: string,
   approveUrl: string,
   denyUrl: string,
   adminPanelUrl: string,
@@ -118,7 +119,7 @@ export function adminApprovalEmailHtml(
   return wrap(`
     <h2 style="margin:0 0 6px;color:#1e3a5f;font-size:20px;font-weight:900">⏳ New player waiting for approval</h2>
     <p style="margin:0 0 20px;color:#4b5563;font-size:14px">
-      A player verified their email and is waiting for your approval.
+      A new player just registered and is waiting for your approval.
     </p>
 
     <!-- Player details card -->
@@ -132,6 +133,7 @@ export function adminApprovalEmailHtml(
           ${row('Nickname',   playerNickname || '—')}
           ${row('League',     playerLeague || '—')}
           ${playerCheering ? row('Cheering for', playerCheering) : ''}
+          ${playerPhone ? row('Phone', playerPhone) : ''}
         </td>
       </tr>
     </table>
@@ -164,18 +166,29 @@ export function adminApprovalEmailHtml(
 /* ─── Template 3 — Player: account approved ────────────────── */
 export function approvedEmailHtml(name: string, loginUrl: string) {
   return wrap(`
-    <h2 style="margin:0 0 6px;color:#166534;font-size:22px;font-weight:900">🎉 You're approved!</h2>
-    <p style="margin:0 0 20px;color:#4b5563;font-size:14px;line-height:1.6">
-      Hi <strong>${esc(name)}</strong> — great news! Your FIFAFun account has been approved.
-      Log in now and start predicting World Cup 2026 matches for bragging rights!
-    </p>
-    ${btn(loginUrl, '⚽ Log in and play', '#166534')}
-    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 18px;margin-top:8px">
-      <p style="margin:0;color:#14532d;font-size:12px;line-height:1.6">
-        🏆 Predict match scores, use your Joker wisely, and answer bonus questions to climb the leaderboard.
-        May the best predictor win!
-      </p>
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:56px;margin-bottom:8px">🎉⚽🏆</div>
+      <h2 style="margin:0 0 6px;color:#166534;font-size:24px;font-weight:900">Congratulations, ${esc(name)}!</h2>
+      <p style="margin:0;color:#166534;font-size:15px;font-weight:700">You're officially a FIFAFun 2026 player!</p>
     </div>
+
+    <p style="margin:0 0 16px;color:#4b5563;font-size:14px;line-height:1.7;text-align:center">
+      Your account has been <strong>approved</strong> by the admin. 🙌<br>
+      Now get in there, start predicting, and show everyone who the real football genius is!
+    </p>
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:18px 22px;margin:0 0 24px">
+      <p style="margin:0 0 10px;color:#14532d;font-size:13px;font-weight:700">🚀 Here's how to play:</p>
+      <p style="margin:0 0 6px;color:#166534;font-size:13px;line-height:1.6">⚽ <strong>Predict match scores</strong> — nail the exact score for max points</p>
+      <p style="margin:0 0 6px;color:#166534;font-size:13px;line-height:1.6">🃏 <strong>Use your Joker</strong> — double your points on one match per round</p>
+      <p style="margin:0;color:#166534;font-size:13px;line-height:1.6">🏅 <strong>Bonus questions</strong> — extra points for tournament predictions</p>
+    </div>
+
+    ${btn(loginUrl, '⚽ Log in and start playing!', '#166534')}
+
+    <p style="text-align:center;margin:16px 0 0;color:#9ca3af;font-size:12px;font-style:italic">
+      May the best predictor win — good luck and have fun! 🌟
+    </p>
   `)
 }
 
@@ -194,6 +207,24 @@ export function deniedEmailHtml(name: string, adminEmail: string) {
       If you think this is a mistake, please reach out to the admin at
       <a href="mailto:${adminEmail}" style="color:#1e3a5f">${adminEmail}</a>.
     </p>
+  `)
+}
+
+/* ─── Template 5 — Password reset ──────────────────────────── */
+export function resetPasswordEmailHtml(name: string, resetUrl: string) {
+  return wrap(`
+    <h2 style="margin:0 0 6px;color:#1e3a5f;font-size:20px;font-weight:900">Reset your password</h2>
+    <p style="margin:0 0 20px;color:#4b5563;font-size:14px;line-height:1.6">
+      Hi <strong>${esc(name)}</strong> — we received a request to reset your FIFAFun password.
+      Click the button below to choose a new one.
+    </p>
+    ${btn(resetUrl, '🔑 Reset my password', '#8b1c2c')}
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px 18px;margin-top:8px">
+      <p style="margin:0;color:#991b1b;font-size:12px;line-height:1.6">
+        ⏰ This link expires in <strong>1 hour</strong>.
+        If you didn't request a password reset, you can safely ignore this email.
+      </p>
+    </div>
   `)
 }
 

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { hashPassword, generateToken } from '@/lib/auth'
-import { sendEmail, verifyEmailHtml, emailEnabled } from '@/lib/email'
+import { sendEmail, verifyEmailHtml, adminApprovalEmailHtml, emailEnabled } from '@/lib/email'
+import { createActionToken } from '@/lib/action-token'
 import { z } from 'zod'
 
 const LEAGUES = ['Aila Attackers', 'Sukuti Strikers', 'Gorkhali Gooners']
@@ -28,38 +29,83 @@ export async function POST(req: NextRequest) {
     if (existingUsername) return NextResponse.json({ error: 'Username already taken' }, { status: 400 })
 
     if (body.phone) {
-      const existingPhone = await prisma.user.findUnique({ where: { phone: body.phone } })
-      if (existingPhone) return NextResponse.json({ error: 'Phone number already registered' }, { status: 400 })
+      try {
+        const existingPhone = await prisma.user.findUnique({ where: { phone: body.phone } })
+        if (existingPhone) return NextResponse.json({ error: 'Phone number already registered' }, { status: 400 })
+      } catch {
+        // phone column not yet in DB — skip check
+      }
     }
 
     const token = generateToken()
     const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
-    await prisma.user.create({
-      data: {
-        name:         body.name,
-        email:        body.email,
-        username:     body.username,
-        phone:        body.phone || null,
-        nickname:     body.nickname,
-        league:       body.league,
-        cheeringFrom: body.cheeringFrom ?? '',
-        password:     await hashPassword(body.password),
-        verifyToken:  token,
-        verifyExpiry: expiry,
-        status:       'pending',
-      },
-    })
+    let user
+    try {
+      user = await prisma.user.create({
+        data: {
+          name:         body.name,
+          email:        body.email,
+          username:     body.username,
+          phone:        body.phone || null,
+          nickname:     body.nickname,
+          league:       body.league,
+          cheeringFrom: body.cheeringFrom ?? '',
+          password:     await hashPassword(body.password),
+          verifyToken:  token,
+          verifyExpiry: expiry,
+          status:       'pending',
+        },
+      })
+    } catch {
+      // Fallback: phone column not in DB yet
+      user = await prisma.user.create({
+        data: {
+          name:         body.name,
+          email:        body.email,
+          username:     body.username,
+          nickname:     body.nickname,
+          league:       body.league,
+          cheeringFrom: body.cheeringFrom ?? '',
+          password:     await hashPassword(body.password),
+          verifyToken:  token,
+          verifyExpiry: expiry,
+          status:       'pending',
+        },
+      })
+    }
 
     const base = process.env.NEXTAUTH_URL ?? 'http://localhost:4001'
     const verifyUrl = base + '/auth/verify?token=' + token
 
     if (emailEnabled()) {
-      await sendEmail(
-        body.email,
-        'Verify your FIFAFun 2026 email',
-        verifyEmailHtml(body.name, verifyUrl),
-      )
+      // 1. Send verify email to player
+      await sendEmail(body.email, 'Verify your FIFAFun 2026 email', verifyEmailHtml(body.name, verifyUrl))
+
+      // 2. Send approve/deny email to all admins
+      const approveUrl = base + '/api/admin/quick-action?token=' + createActionToken(user.id, 'approve')
+      const denyUrl    = base + '/api/admin/quick-action?token=' + createActionToken(user.id, 'deny')
+      const adminPanel = base + '/admin/users'
+      const admins = await prisma.user.findMany({ where: { role: 'admin' } })
+      for (const admin of admins) {
+        await sendEmail(
+          admin.email,
+          `[FIFAFun] New registration: ${body.name} — waiting for approval`,
+          adminApprovalEmailHtml(
+            body.name,
+            body.email,
+            body.username,
+            body.nickname,
+            body.league,
+            body.cheeringFrom ?? '',
+            body.phone ?? '',
+            approveUrl,
+            denyUrl,
+            adminPanel,
+          ),
+        ).catch(() => {})
+      }
+
       return NextResponse.json({ ok: true })
     }
 

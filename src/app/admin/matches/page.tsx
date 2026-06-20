@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminMatchesPage() {
   const matches: any[] = await prisma.match.findMany({
     include: { homeTeam: true, awayTeam: true },

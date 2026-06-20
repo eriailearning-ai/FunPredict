@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db'
 import Link from 'next/link'
 import SeedDbButton from './SeedDbButton'
 
-export const revalidate = 0
+export const dynamic = 'force-dynamic'
 
 // Safe wrappers — new tables won't exist until `npx prisma db push` is run
 async function safeCount(fn: () => Promise<number>): Promise<number> {

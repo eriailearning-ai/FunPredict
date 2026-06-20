@@ -2,6 +2,8 @@ import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 const NAV = [
   { group: 'Overview', items: [
     { href: '/admin', label: 'Dashboard', icon: '📊' },

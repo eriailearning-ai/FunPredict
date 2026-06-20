@@ -6,6 +6,8 @@ import { getSidebarData } from '@/lib/sidebar'
 import { getSession } from '@/lib/auth'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function PrivacyPage() {
   const [sidebarData, session] = await Promise.all([getSidebarData(), getSession().catch(() => null)])
 

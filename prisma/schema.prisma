@@ -26,6 +26,8 @@ model User {
   status        String    @default("pending")
   verifyToken   String?
   verifyExpiry  DateTime?
+  resetToken    String?
+  resetExpiry   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

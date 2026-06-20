@@ -93,7 +93,7 @@ export default function Navbar({ user, visitStats }: Props) {
             )}
             {user ? (
               <>
-                <span className="text-gray-600 font-medium text-xs">{displayName}</span>
+                <Link href="/profile" className="text-gray-600 font-medium text-xs hover:text-blue-700">{displayName}</Link>
                 {isAdmin && (
                   <Link href="/admin" className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded font-semibold">⚙ Admin</Link>
                 )}
@@ -147,7 +147,7 @@ export default function Navbar({ user, visitStats }: Props) {
             <div className="border-t border-gray-100 pt-2 mt-2">
               {user ? (
                 <>
-                  <p className="px-4 py-2 text-sm text-gray-500">{displayName}</p>
+                  <Link href="/profile" className="block px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 rounded-md" onClick={() => setMenuOpen(false)}>👤 {displayName}</Link>
                   <button onClick={logout} className="block w-full text-left px-4 py-2 text-sm text-red-600">Logout</button>
                 </>
               ) : (

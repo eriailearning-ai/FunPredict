@@ -94,8 +94,8 @@ export async function POST() {
         data: {
           options: JSON.stringify(q.options),
           points: q.points,
-          // Re-open if was mistakenly closed; preserve 'answered' status
-          ...(existing.status === 'closed' ? { status: 'open' } : {}),
+          // Always reopen unless already answered
+          ...(existing.status !== 'answered' ? { status: 'open' } : {}),
         },
       })
       skipped++
@@ -104,11 +104,4 @@ export async function POST() {
     await prisma.bonusQuestion.create({
       data: {
         question: q.question, type: q.type, stage: q.stage,
-        options: JSON.stringify(q.options), points: q.points, status: q.status,
-      },
-    })
-    created++
-  }
-
-  return NextResponse.json({ ok: true, created, skipped })
-}
+  

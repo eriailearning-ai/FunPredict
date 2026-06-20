@@ -94,7 +94,9 @@ export default function PredictionsClient({
   )
   const [saving,  setSaving]  = useState<number | null>(null)
   const [saved,   setSaved]   = useState<Record<number, boolean>>({})
-  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({})
+  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>(() => ({
+    [fmtDate(new Date().toISOString())]: true,
+  }))
   const [tab, setTab]         = useState(isLoggedIn ? 1 : 0)
   const [rulesOpen, setRulesOpen] = useState(false)
 

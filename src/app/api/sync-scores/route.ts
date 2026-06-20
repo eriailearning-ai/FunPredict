@@ -100,6 +100,13 @@ async function syncMatchResults() {
     }
   } catch {}
 
+  // Save last sync timestamp
+  await prisma.setting.upsert({
+    where:  { key: 'last_sync_at' },
+    create: { key: 'last_sync_at', value: new Date().toISOString() },
+    update: { value: new Date().toISOString() },
+  }).catch(() => {})
+
   return { ok: true, updated, scored, total: liveMatches.length }
 }
 

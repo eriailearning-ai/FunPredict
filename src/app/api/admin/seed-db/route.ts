@@ -35,6 +35,7 @@ const TEAMS: [string, string, string, string][] = [
 ]
 
 const SCORES: Record<string, {h:number;a:number}> = {
+  // Matchday 1
   'MEX-ZAF':{h:2,a:0}, 'KOR-CZE':{h:2,a:1},
   'CAN-BIH':{h:1,a:1}, 'USA-PRY':{h:4,a:1},
   'HTI-SCO':{h:0,a:1}, 'AUS-TUR':{h:2,a:0},
@@ -45,6 +46,13 @@ const SCORES: Record<string, {h:number;a:number}> = {
   'IRN-NZL':{h:2,a:2}, 'BEL-EGY':{h:1,a:1},
   'FRA-SEN':{h:3,a:1}, 'IRQ-NOR':{h:1,a:2},
   'ARG-ALG':{h:3,a:0}, 'AUT-JOR':{h:3,a:1},
+  'GHA-PAN':{h:1,a:0}, 'ENG-CRO':{h:4,a:2},
+  'POR-COD':{h:1,a:1}, 'UZB-COL':{h:1,a:3},
+  // Matchday 2
+  'CZE-ZAF':{h:1,a:1}, 'MEX-KOR':{h:1,a:0},
+  'SUI-BIH':{h:4,a:1}, 'CAN-QAT':{h:6,a:0},
+  'SCO-MAR':{h:0,a:1}, 'BRA-HTI':{h:3,a:0},
+  'USA-AUS':{h:2,a:0}, 'TUR-PRY':{h:0,a:1},
 }
 
 // [homeCode, awayCode, utcDate, venue, group]

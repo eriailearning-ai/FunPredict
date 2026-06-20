@@ -19,13 +19,14 @@ export default async function StandingsPage() {
   const sidebarData = await getSidebarData({ userLeague: session ? userLeague : '', isAdmin })
     .catch(() => ({ topPerformers: [], nextMatch: null, comingUp: null, groupAStandings: [], topScorers: [] }))
 
-  // Load all group-stage teams and finished matches from DB
-  const [teams, matches] = await Promise.all([
-    prisma.team.findMany({ where: { group: { not: null } }, orderBy: { group: 'asc' } }).catch(() => []),
+  // Load all group-stage teams, finished matches, and last sync time from DB
+  const [teams, matches, lastSyncSetting] = await Promise.all([
+    prisma.team.findMany({ orderBy: { group: 'asc' } }).catch(() => []),
     prisma.match.findMany({
       where: { stage: 'group', status: 'finished' },
       include: { homeTeam: true, awayTeam: true },
     }).catch(() => []),
+    prisma.setting.findUnique({ where: { key: 'last_sync_at' } }).catch(() => null),
   ])
 
   // Build tally per team
@@ -56,7 +57,7 @@ export default async function StandingsPage() {
   // Group teams into StandingGroup[]
   const byGroup: Record<string, Tally[]> = {}
   for (const t of Object.values(tally)) {
-    if (!t.group) continue
+    if (!t.group || t.group === '') continue
     if (!byGroup[t.group]) byGroup[t.group] = []
     byGroup[t.group].push(t)
   }
@@ -75,7 +76,17 @@ export default async function StandingsPage() {
       .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf),
   }))
 
-  const now = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  const lastSyncAt = lastSyncSetting?.value ? new Date(lastSyncSetting.value) : null
+  const syncLabel = lastSyncAt
+    ? (() => {
+        const mins = Math.round((Date.now() - lastSyncAt.getTime()) / 60000)
+        if (mins < 1)  return 'just now'
+        if (mins < 60) return `${mins}m ago`
+        const hrs = Math.floor(mins / 60)
+        if (hrs < 24)  return `${hrs}h ago`
+        return lastSyncAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      })()
+    : 'not synced yet'
 
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>
@@ -93,7 +104,7 @@ export default async function StandingsPage() {
           <main className="flex-1 min-w-0">
             <StandingsTabs groups={GROUPS} />
             <p className="text-xs text-gray-400 mt-4 text-center">
-              Live from database · Updated {now}
+              Live from database · Last synced: {syncLabel} · {matches.length} finished match{matches.length !== 1 ? 'es' : ''}
             </p>
           </main>
 

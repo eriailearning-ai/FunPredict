@@ -28,7 +28,13 @@ export async function sendEmail(to: string, subject: string, html: string) {
     console.log('[email] SMTP not configured — skipping send to', to, '|', subject)
     return
   }
-  await makeTransport().sendMail({ from: process.env.EMAIL_FROM, to, subject, html })
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('sendEmail timed out after 8s')), 8_000)
+  )
+  await Promise.race([
+    makeTransport().sendMail({ from: process.env.EMAIL_FROM, to, subject, html }),
+    timeout,
+  ])
 }
 
 /* ─── Shared layout ────────────────────────────────────────── */

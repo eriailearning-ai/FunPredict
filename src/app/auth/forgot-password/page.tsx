@@ -13,16 +13,21 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const res = await fetch('/api/auth/forgot-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-    const data = await res.json()
-    setLoading(false)
-    if (!res.ok) { setError(data.error); return }
-    if (data.resetUrl) setDevUrl(data.resetUrl)
-    setDone(true)
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json().catch(() => ({}))
+      setLoading(false)
+      if (!res.ok) { setError(data.error ?? 'Something went wrong. Please try again.'); return }
+      if (data.resetUrl) setDevUrl(data.resetUrl)
+      setDone(true)
+    } catch {
+      setLoading(false)
+      setError('Could not reach the server. Please try again.')
+    }
   }
 
   const bg = 'linear-gradient(160deg, #0d1b3e 0%, #1e3a5f 50%, #8b1c2c 100%)'

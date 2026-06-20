@@ -1,6 +1,75 @@
 'use client'
 import { useEffect, useState } from 'react'
 
+// ─── Change Password Card ─────────────────────────────────────
+function ChangePasswordCard() {
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw]         = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [saving, setSaving]       = useState(false)
+  const [msg, setMsg]             = useState('')
+  const [err, setErr]             = useState('')
+
+  const fieldClass = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+
+  async function save() {
+    setMsg(''); setErr('')
+    if (newPw !== confirmPw) { setErr('New passwords do not match'); return }
+    if (newPw.length < 8)    { setErr('New password must be at least 8 characters'); return }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErr(data.error ?? 'Failed to update password'); return }
+      setMsg('Password updated successfully!')
+      setCurrentPw(''); setNewPw(''); setConfirmPw('')
+    } catch {
+      setErr('Something went wrong. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-5">
+      <h2 className="text-sm font-bold text-gray-800 mb-4">🔐 Change Password</h2>
+      {msg && <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">{msg}</div>}
+      {err && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{err}</div>}
+      <div className="space-y-3 max-w-sm">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Current Password</label>
+          <input type="password" className={fieldClass} value={currentPw}
+            onChange={e => setCurrentPw(e.target.value)} placeholder="••••••••" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">New Password</label>
+          <input type="password" className={fieldClass} value={newPw}
+            onChange={e => setNewPw(e.target.value)} placeholder="Min 8 characters" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Confirm New Password</label>
+          <input type="password" className={fieldClass} value={confirmPw}
+            onChange={e => setConfirmPw(e.target.value)} placeholder="Repeat new password" />
+          {newPw && confirmPw && newPw !== confirmPw && (
+            <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+          )}
+        </div>
+        <button
+          onClick={save}
+          disabled={saving || !currentPw || !newPw || !confirmPw || newPw !== confirmPw}
+          className="px-5 py-2 rounded-lg text-white text-sm font-bold disabled:opacity-50 hover:opacity-90"
+          style={{ background: '#8b1c2c' }}>
+          {saving ? 'Updating…' : 'Update Password'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 type Settings = {
   site_name: string
   scoring_exact: string
@@ -131,6 +200,8 @@ export default function AdminSettingsPage() {
         style={{ background: '#1e3a5f' }}>
         {saving ? 'Saving…' : 'Save Settings'}
       </button>
+
+      <ChangePasswordCard />
     </div>
   )
 }

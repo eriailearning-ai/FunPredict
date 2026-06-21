@@ -5,6 +5,16 @@ import { sendEmail, emailEnabled } from '@/lib/email'
 
 const RESET_PREFIX = 'reset:'
 
+/** Races a promise against a timeout — throws if timeout wins */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    ),
+  ])
+}
+
 function resetEmailHtml(name: string, resetUrl: string) {
   return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f6fb;padding:32px 16px">
   <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden">
@@ -29,6 +39,7 @@ function resetEmailHtml(name: string, resetUrl: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Parse body
     let email = ''
     try {
       const body = await req.json()
@@ -36,64 +47,73 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
-
     if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
-    // Find user
+    // 2. Find user — 5s timeout on DB
     let user: { id: string; name: string; email: string } | null = null
     try {
-      user = await prisma.user.findUnique({ where: { email } })
+      user = await withTimeout(
+        prisma.user.findUnique({ where: { email } }),
+        5_000, 'DB findUnique'
+      )
     } catch (e) {
-      console.error('[forgot-password] DB lookup failed:', e)
-      return NextResponse.json({ ok: true }) // fail silently — don't reveal whether email exists
+      console.error('[forgot-password] DB lookup failed/timed out:', e)
+      // Return ok so the page doesn't show an error to the user
+      return NextResponse.json({ ok: true })
     }
 
     if (!user) return NextResponse.json({ ok: true })
 
+    // 3. Save reset token — try resetToken cols, fall back to verifyToken
     const token = generateToken()
-    const expiry = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
-
-    // Try resetToken first; fall back to verifyToken with a reset: prefix
+    const expiry = new Date(Date.now() + 60 * 60 * 1000)
     let saved = false
+
     try {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { resetToken: token, resetExpiry: expiry },
-      })
+      await withTimeout(
+        prisma.user.update({ where: { id: user.id }, data: { resetToken: token, resetExpiry: expiry } }),
+        4_000, 'DB update resetToken'
+      )
       saved = true
-    } catch {
-      // resetToken column likely not migrated — use verifyToken as fallback
+    } catch (e) {
+      console.error('[forgot-password] resetToken save failed, trying verifyToken fallback:', e)
     }
 
     if (!saved) {
       try {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { verifyToken: RESET_PREFIX + token, verifyExpiry: expiry },
-        })
+        await withTimeout(
+          prisma.user.update({ where: { id: user.id }, data: { verifyToken: RESET_PREFIX + token, verifyExpiry: expiry } }),
+          4_000, 'DB update verifyToken fallback'
+        )
         saved = true
       } catch (e) {
-        console.error('[forgot-password] Could not save reset token:', e)
-        return NextResponse.json({ error: 'Reset unavailable — please contact admin' }, { status: 500 })
+        console.error('[forgot-password] verifyToken fallback also failed:', e)
+        return NextResponse.json({ error: 'Reset unavailable right now — please try again later' }, { status: 500 })
       }
     }
 
+    // 4. Build reset URL and respond IMMEDIATELY — email sends after
     const base = process.env.NEXTAUTH_URL ?? new URL(req.url).origin
     const resetUrl = `${base}/auth/reset-password?token=${token}`
 
+    // Return success right away so Vercel doesn't time out the response
+    const response = NextResponse.json({ ok: true, ...(emailEnabled() ? {} : { resetUrl }) })
+
+    // 5. Send email — best-effort with 4s timeout, errors are logged only
     if (emailEnabled()) {
-      try {
-        await sendEmail(user.email, 'Reset your FIFAFun password', resetEmailHtml(user.name, resetUrl))
-        console.log('[forgot-password] Reset email sent to', user.email)
-      } catch (e) {
+      withTimeout(
+        sendEmail(user.email, 'Reset your FIFAFun password', resetEmailHtml(user.name, resetUrl)),
+        4_000, 'sendEmail'
+      ).then(() => {
+        console.log('[forgot-password] Reset email sent to', user!.email)
+      }).catch(e => {
         console.error('[forgot-password] Email send failed:', e)
-        // Token saved — still return ok
-      }
+      })
     } else {
       console.log('[forgot-password] SMTP disabled — reset URL:', resetUrl)
     }
 
-    return NextResponse.json({ ok: true, ...(emailEnabled() ? {} : { resetUrl }) })
+    return response
 
   } catch (err) {
     console.error('[forgot-password] Unexpected error:', err)

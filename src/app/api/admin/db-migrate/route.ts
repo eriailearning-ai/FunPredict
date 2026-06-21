@@ -31,6 +31,7 @@ export async function POST() {
     { col: 'resetToken',   sql: `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "resetToken" TEXT` },
     { col: 'resetExpiry',  sql: `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "resetExpiry" TIMESTAMP(3)` },
     { col: 'phone',        sql: `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "phone" TEXT` },
+    { col: 'phone_unique', sql: `CREATE UNIQUE INDEX IF NOT EXISTS "User_phone_key" ON "User"("phone") WHERE "phone" IS NOT NULL` },
     { col: 'verifyToken',  sql: `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "verifyToken" TEXT` },
     { col: 'verifyExpiry', sql: `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "verifyExpiry" TIMESTAMP(3)` },
     { col: 'nickname',     sql: `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "nickname" TEXT NOT NULL DEFAULT ''` },

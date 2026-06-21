@@ -57,8 +57,9 @@ export async function POST(req: NextRequest) {
           status:       'pending',
         },
       })
-    } catch {
+    } catch (e: any) {
       // Fallback: phone column not in DB yet — create without phone
+      console.error('[register] user.create with phone failed, retrying without phone:', e?.message)
       user = await prisma.user.create({
         data: {
           name:         body.name,

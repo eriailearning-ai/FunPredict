@@ -7,13 +7,5 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // ws is a native Node.js module used by @neondatabase/serverless —
-  // tell webpack not to try to bundle it (server-side only)
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.externals = [...(config.externals || []), 'ws']
-    }
-    return config
-  },
 }
 module.exports = nextConfig

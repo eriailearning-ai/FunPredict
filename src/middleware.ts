@@ -13,9 +13,10 @@ const PUBLIC_PATHS = [
   '/schedule', '/tournament',
   '/disclaimer', '/privacy',
   // Auth flow
-  '/auth/login', '/auth/register', '/auth/verify', '/auth/forgot-password',
+  '/auth/login', '/auth/register', '/auth/verify', '/auth/forgot-password', '/auth/reset-password',
   // Public APIs
   '/api/auth/login', '/api/auth/register', '/api/auth/verify',
+  '/api/auth/forgot-password', '/api/auth/reset-password',
   '/api/admin/quick-action',          // one-click approve/deny from email (token-secured)
   '/api/debug', '/api/sync-scores', '/api/polls', '/api/scores', '/api/bonus',
   '/api/tournament',                               // public schedule/teams/matches data

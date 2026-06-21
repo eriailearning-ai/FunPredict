@@ -77,16 +77,16 @@ export default function SiteBanner({ height = '350px', showLogo = true }: Props)
           style={{ top: 'clamp(-20px, -2vw, -30px)', left: 20, zIndex: 60 }}
           aria-label="Home"
         >
-          {/* Mobile: 70×70 | sm: 150×150 | lg+: 180×110 */}
+          {/* Mobile: 80×70 | sm: 150×150 | lg+: 180×110 */}
           <div
             className="bg-white shadow-2xl overflow-hidden flex items-center justify-center
-                       w-[70px] h-[70px] sm:w-[150px] sm:h-[150px] lg:w-[180px] lg:h-[110px]"
+                       w-[80px] h-[70px] sm:w-[150px] sm:h-[150px] lg:w-[180px] lg:h-[110px]"
             style={{ borderRadius: 16, border: '3px solid white', padding: '4px 4px 0 4px' }}
           >
             <img
               src="/images/logo/cropped-worldcup-eagle-logo-1.png"
               alt="FIFAFun 2026"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             />
           </div>
         </Link>

@@ -6,9 +6,9 @@ function makeTransport() {
     host:              process.env.EMAIL_SERVER_HOST,
     port:              Number(process.env.EMAIL_SERVER_PORT ?? 587),
     secure:            Number(process.env.EMAIL_SERVER_PORT) === 465,
-    connectionTimeout: 10_000,   // 10 s to connect
-    greetingTimeout:   10_000,   // 10 s for SMTP greeting
-    socketTimeout:     15_000,   // 15 s per socket operation
+    connectionTimeout: 3_000,   // must be < the 4s Promise.race so socket closes cleanly
+    greetingTimeout:   3_000,
+    socketTimeout:     3_000,
     auth: {
       user: process.env.EMAIL_SERVER_USER,
       pass: process.env.EMAIL_SERVER_PASSWORD,
@@ -29,7 +29,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
     return
   }
   const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('sendEmail timed out after 5s')), 5_000)
+    setTimeout(() => reject(new Error('sendEmail timed out after 4s')), 4_000)
   )
   await Promise.race([
     makeTransport().sendMail({ from: process.env.EMAIL_FROM, to, subject, html }),

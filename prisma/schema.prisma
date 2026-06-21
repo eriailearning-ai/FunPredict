@@ -1,7 +1,8 @@
 // Uses PostgreSQL (Neon) for both local dev and production.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {

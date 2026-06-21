@@ -191,4 +191,36 @@ export async function POST() {
     MATCHES.map(async ([homeCode, awayCode, utcDate, venue, group]) => {
       const homeTeamId = teamMap[homeCode]
       const awayTeamId = teamMap[awayCode]
-      if (!homeTeamId || !awayT
+      if (!homeTeamId || !awayTeamId) return
+
+      const key    = `${homeCode}-${awayCode}`
+      const scores = SCORES[key]
+      const status = scores ? 'finished' : matchStatus(utcDate)
+      const locked = scores ? true : new Date() >= new Date(new Date(utcDate).getTime() - 15 * 60 * 1000)
+
+      const data = {
+        homeTeamId, awayTeamId, group, stage: 'group',
+        matchDate: new Date(utcDate), venue, status, locked,
+        homeScore: scores?.h ?? null,
+        awayScore: scores?.a ?? null,
+      }
+
+      const existingId = existingMap.get(`${homeTeamId}-${awayTeamId}`)
+      if (existingId) {
+        await prisma.match.update({ where: { id: existingId }, data })
+        updated++
+      } else {
+        await prisma.match.create({ data })
+        created++
+      }
+    })
+  )
+
+  const counts = {
+    upcoming: await prisma.match.count({ where: { status: 'upcoming' } }),
+    finished: await prisma.match.count({ where: { status: 'finished' } }),
+    teams:    await prisma.team.count(),
+  }
+
+  return NextResponse.json({ ok: true, created, updated, ...counts })
+}

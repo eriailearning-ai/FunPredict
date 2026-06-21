@@ -100,7 +100,7 @@ export default function RegisterPage() {
         <div className="text-center mb-6">
           <div className="text-4xl mb-2">🏆</div>
           <h1 className="text-2xl font-black text-white mb-1">Join FIFAFun 2026</h1>
-          <p className="text-sm text-blue-200">Create an account and predict every World Cup match</p>
+          <p className="text-sm text-blue-200">Create your free account and join the fun</p>
         </div>
 
         {/* Notice */}
@@ -144,12 +144,12 @@ export default function RegisterPage() {
             {/* Row 1b: Phone (optional) */}
             <div>
               <label className="block text-xs font-bold text-blue-200 uppercase tracking-wide mb-1.5">
-                Mobile Number <span className="text-blue-400 font-normal">(optional — for quick login)</span>
+                Mobile Number <span className="text-blue-400 font-normal">(optional — digits only, no spaces)</span>
               </label>
               <input
                 className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/25 text-white placeholder-blue-300 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 type="tel"
-                placeholder="e.g. +1 555 123 4567"
+                placeholder="e.g. 4048278509"
                 value={form.phone}
                 onChange={set('phone')}
                 autoComplete="tel"

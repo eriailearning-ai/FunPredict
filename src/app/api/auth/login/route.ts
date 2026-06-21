@@ -41,11 +41,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Username, email or phone required' }, { status: 400 })
     }
 
+    // Normalize: if identifier looks like a phone (all digits), strip non-digits for lookup
+    const phoneVariant = identifier.replace(/\D/g, '')
+
     // Try email + username + phone; fall back if phone column not yet migrated
     let user = null
     try {
       user = await prisma.user.findFirst({
-        where: { OR: [{ email: identifier }, { username: identifier }, { phone: identifier }] },
+        where: { OR: [{ email: identifier }, { username: identifier }, { phone: phoneVariant }] },
       })
     } catch {
       user = await prisma.user.findFirst({

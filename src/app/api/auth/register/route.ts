@@ -11,7 +11,7 @@ const schema = z.object({
   username:     z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, underscores'),
   name:         z.string().min(2).max(60),
   email:        z.string().email(),
-  phone:        z.string().max(20).optional().default(''),
+  phone:        z.string().max(20).optional().default('').transform(v => v.replace(/\D/g, '')),
   password:     z.string().min(8),
   nickname:     z.string().min(2).max(40),
   league:       z.string().refine(v => LEAGUES.includes(v), { message: 'Invalid league' }),

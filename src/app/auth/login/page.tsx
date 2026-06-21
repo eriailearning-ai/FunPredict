@@ -35,9 +35,6 @@ function LoginForm() {
             <span className="text-xs font-semibold text-blue-200 tracking-wide">World Cup 2026</span>
           </span>
         </Link>
-        <Link href="/auth/register" className="text-sm text-yellow-400 font-semibold hover:text-yellow-300">
-          Register free →
-        </Link>
       </div>
 
       {/* Main card */}
@@ -50,7 +47,7 @@ function LoginForm() {
             <h1 className="text-3xl font-black text-white tracking-tight mb-1">
               Welcome Back!
             </h1>
-            <p className="text-sm text-blue-200">Log in to FIFAFun and make your predictions</p>
+            <p className="text-sm text-blue-200">Log in to FIFAFun and join the fun</p>
           </div>
 
           {/* Alerts */}

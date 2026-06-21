@@ -32,7 +32,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
     setTimeout(() => reject(new Error('sendEmail timed out after 4s')), 4_000)
   )
   await Promise.race([
-    makeTransport().sendMail({ from: process.env.EMAIL_FROM, to, subject, html }),
+    makeTransport().sendMail({ from: `"FIFAFun 2026 Admin" <${process.env.EMAIL_FROM}>`, to, subject, html }),
     timeout,
   ])
 }

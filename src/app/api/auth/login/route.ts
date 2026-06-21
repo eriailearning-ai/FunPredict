@@ -50,7 +50,9 @@ export async function POST(req: NextRequest) {
       user = await prisma.user.findFirst({
         where: { OR: [{ email: identifier }, { username: identifier }, { phone: phoneVariant }] },
       })
-    } catch {
+    } catch (e: any) {
+      // phone column not yet in DB — fall back to email/username only
+      console.warn('[login] phone lookup failed, falling back:', e?.message)
       user = await prisma.user.findFirst({
         where: { OR: [{ email: identifier }, { username: identifier }] },
       })

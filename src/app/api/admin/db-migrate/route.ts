@@ -5,6 +5,22 @@ import { prisma } from '@/lib/db'
 export const dynamic = 'force-dynamic'
 
 /**
+ * GET /api/admin/db-migrate
+ * Returns which columns exist in the User table + phone values for all users.
+ */
+export async function GET() {
+  await requireAdmin()
+  const cols = await prisma.$queryRaw<{ column_name: string }[]>`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_name = 'User' ORDER BY ordinal_position
+  `
+  const phones = await prisma.$queryRaw<{ id: string; email: string; phone: string | null }[]>`
+    SELECT id, email, phone FROM "User" ORDER BY "createdAt" DESC LIMIT 20
+  `
+  return NextResponse.json({ columns: cols.map(c => c.column_name), phones })
+}
+
+/**
  * POST /api/admin/db-migrate
  * Adds missing columns to the User table (safe, uses IF NOT EXISTS).
  */

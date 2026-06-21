@@ -61,12 +61,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No account found with those details' }, { status: 401 })
     }
 
-    const passwordOk = await verifyPassword(password, user.password)
-    if (!passwordOk) {
-      if (isForm) return errRedirect('wrongpw')
-      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
-    }
-
+    // Check account status BEFORE password so users get a meaningful message
     if (user.status === 'pending') {
       if (isForm) return errRedirect('pending')
       return NextResponse.json({ error: 'Please verify your email first' }, { status: 403 })
@@ -78,6 +73,12 @@ export async function POST(req: NextRequest) {
     if (user.status === 'denied') {
       if (isForm) return errRedirect('denied')
       return NextResponse.json({ error: 'Your account was not approved' }, { status: 403 })
+    }
+
+    const passwordOk = await verifyPassword(password, user.password)
+    if (!passwordOk) {
+      if (isForm) return errRedirect('wrongpw')
+      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
     }
 
     const token = await createSession(user.id)

@@ -50,7 +50,7 @@ export default function SiteBanner({ height = '350px', showLogo = true }: Props)
   }, [])
 
   return (
-    <div className="relative w-full overflow-visible" style={{ height }}>
+    <div className="relative w-full overflow-visible h-[245px] lg:h-[350px]">
       {/* Gradient fallback base */}
       <div
         className="absolute inset-0"
@@ -77,10 +77,10 @@ export default function SiteBanner({ height = '350px', showLogo = true }: Props)
           style={{ top: 'clamp(-20px, -2vw, -30px)', left: 20, zIndex: 60 }}
           aria-label="Home"
         >
-          {/* Mobile: 75×75 (original square) | lg+: 180×110 (landscape) */}
+          {/* Mobile: 75×75 | sm: 150×150 | lg+: 180×110 */}
           <div
             className="bg-white shadow-2xl overflow-hidden flex items-center justify-center
-                       w-[75px] h-[75px] lg:w-[180px] lg:h-[110px]"
+                       w-[75px] h-[75px] sm:w-[150px] sm:h-[150px] lg:w-[180px] lg:h-[110px]"
             style={{ borderRadius: 16, border: '3px solid white', padding: 4 }}
           >
             <img

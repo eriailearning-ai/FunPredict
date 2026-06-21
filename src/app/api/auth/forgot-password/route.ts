@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { generateToken } from '@/lib/auth'
 import { sendEmail, emailEnabled } from '@/lib/email'
 
+const RESET_PREFIX = 'reset:'
+
 function resetEmailHtml(name: string, resetUrl: string) {
   return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f6fb;padding:32px 16px">
   <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden">
@@ -37,28 +39,43 @@ export async function POST(req: NextRequest) {
 
     if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
-    // Find user — always return ok to prevent email enumeration
+    // Find user
     let user: { id: string; name: string; email: string } | null = null
     try {
       user = await prisma.user.findUnique({ where: { email } })
-    } catch (dbErr) {
-      console.error('[forgot-password] DB lookup failed:', dbErr)
-      return NextResponse.json({ ok: true }) // fail silently
+    } catch (e) {
+      console.error('[forgot-password] DB lookup failed:', e)
+      return NextResponse.json({ ok: true }) // fail silently — don't reveal whether email exists
     }
 
     if (!user) return NextResponse.json({ ok: true })
 
-    // Save reset token — wrapped in try/catch in case columns not yet migrated
     const token = generateToken()
     const expiry = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+
+    // Try resetToken first; fall back to verifyToken with a reset: prefix
+    let saved = false
     try {
       await prisma.user.update({
         where: { id: user.id },
         data: { resetToken: token, resetExpiry: expiry },
       })
-    } catch (updateErr) {
-      console.error('[forgot-password] Token save failed (resetToken column missing?):', updateErr)
-      return NextResponse.json({ error: 'Reset not available — contact admin' }, { status: 500 })
+      saved = true
+    } catch {
+      // resetToken column likely not migrated — use verifyToken as fallback
+    }
+
+    if (!saved) {
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { verifyToken: RESET_PREFIX + token, verifyExpiry: expiry },
+        })
+        saved = true
+      } catch (e) {
+        console.error('[forgot-password] Could not save reset token:', e)
+        return NextResponse.json({ error: 'Reset unavailable — please contact admin' }, { status: 500 })
+      }
     }
 
     const base = process.env.NEXTAUTH_URL ?? new URL(req.url).origin
@@ -68,9 +85,9 @@ export async function POST(req: NextRequest) {
       try {
         await sendEmail(user.email, 'Reset your FIFAFun password', resetEmailHtml(user.name, resetUrl))
         console.log('[forgot-password] Reset email sent to', user.email)
-      } catch (emailErr) {
-        console.error('[forgot-password] Email send failed:', emailErr)
-        // Token is saved — still return ok so UI doesn't hang
+      } catch (e) {
+        console.error('[forgot-password] Email send failed:', e)
+        // Token saved — still return ok
       }
     } else {
       console.log('[forgot-password] SMTP disabled — reset URL:', resetUrl)

@@ -58,11 +58,10 @@ export async function POST(req: NextRequest) {
       )
     } catch (e) {
       console.error('[forgot-password] DB lookup failed/timed out:', e)
-      // Return ok so the page doesn't show an error to the user
-      return NextResponse.json({ ok: true })
+      return NextResponse.json({ error: 'Service unavailable, please try again.' }, { status: 503 })
     }
 
-    if (!user) return NextResponse.json({ ok: true })
+    if (!user) return NextResponse.json({ error: 'No account found with that email address.' }, { status: 404 })
 
     // 3. Save reset token — try resetToken cols, fall back to verifyToken
     const token = generateToken()

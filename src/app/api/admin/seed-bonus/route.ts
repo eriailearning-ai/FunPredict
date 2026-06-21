@@ -7,6 +7,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 const BONUS_QUESTIONS = [
   {
     question: 'Who will win the FIFA World Cup 2026?',

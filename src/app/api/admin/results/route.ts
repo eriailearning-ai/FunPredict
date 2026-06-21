@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
 import { calcPoints } from '@/lib/scoring'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   await requireAdmin()
   const { matchId, homeScore, awayScore } = await req.json()

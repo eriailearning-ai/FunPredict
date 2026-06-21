@@ -10,6 +10,8 @@ import { prisma } from '@/lib/db'
 import { verifyActionToken } from '@/lib/action-token'
 import { sendEmail, approvedEmailHtml, deniedEmailHtml } from '@/lib/email'
 
+export const dynamic = 'force-dynamic'
+
 const BASE = process.env.NEXTAUTH_URL ?? 'http://localhost:4001'
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? ''
 

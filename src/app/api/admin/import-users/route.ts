@@ -28,6 +28,8 @@ import { sendEmail, approvedEmailHtml, emailEnabled } from '@/lib/email'
 import crypto from 'crypto'
 import { z } from 'zod'
 
+export const dynamic = 'force-dynamic'
+
 const BASE = process.env.NEXTAUTH_URL ?? 'http://localhost:4001'
 
 const UserRow = z.object({

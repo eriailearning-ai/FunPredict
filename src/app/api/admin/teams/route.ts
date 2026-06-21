@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   await requireAdmin()
   const teams = await prisma.team.findMany({ orderBy: [{ group: 'asc' }, { name: 'asc' }] })

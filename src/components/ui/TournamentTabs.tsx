@@ -87,7 +87,8 @@ export default function TournamentTabs({ matches }: { matches: MatchRow[] }) {
 
           {dayKeys.map(day => {
             const dayMatches = byDay[day]
-            const heading = fmtDayHeading(day)
+            // Use the actual match timestamp (not the key string) so UTC-midnight parsing doesn't shift the day
+            const heading = fmtDayHeading(dayMatches[0].matchDate)
 
             return (
               <div key={day} className="mb-1" id={day === todayKey ? 'match-today' : undefined} style={day === todayKey ? { scrollMarginTop: 80 } : undefined}>

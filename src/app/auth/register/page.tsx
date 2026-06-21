@@ -6,8 +6,8 @@ const LEAGUES = ['Aila Attackers', 'Sukuti Strikers', 'Gorkhali Gooners']
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
-    username: '', email: '', phone: '', password: '', confirmPassword: '',
-    name: '', nickname: '', league: '', cheeringFrom: '',
+    username: '', email: '', password: '', confirmPassword: '',
+    name: '', nickname: '', league: '', cheeringFrom: '', phone: '',
   })
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
@@ -31,11 +31,12 @@ export default function RegisterPage() {
         username: form.username,
         name: form.name,
         email: form.email,
-        phone: form.phone,
+
         password: form.password,
         nickname: form.nickname,
         league: form.league,
         cheeringFrom: form.cheeringFrom,
+        phone: form.phone || undefined,
       }),
     })
     const data = await res.json()
@@ -141,22 +142,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Row 1b: Phone (optional) */}
-            <div>
-              <label className="block text-xs font-bold text-blue-200 uppercase tracking-wide mb-1.5">
-                Mobile Number <span className="text-blue-400 font-normal">(optional — digits only, no spaces)</span>
-              </label>
-              <input
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/25 text-white placeholder-blue-300 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                type="tel"
-                placeholder="e.g. 4048278509"
-                value={form.phone}
-                onChange={set('phone')}
-                autoComplete="tel"
-              />
-              <p className="text-xs text-blue-400 mt-1">You can use this number to log in instead of email</p>
-            </div>
-
             {/* Row 2: Password + Confirm */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -236,17 +221,31 @@ export default function RegisterPage() {
               <p className="text-xs text-blue-400 mt-1">Pick the league standings group you belong to</p>
             </div>
 
-            {/* Cheering from */}
-            <div>
-              <label className="block text-xs font-bold text-blue-200 uppercase tracking-wide mb-1.5">
-                Cheering From <span className="text-blue-400 font-normal">(optional)</span>
-              </label>
-              <input
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/25 text-white placeholder-blue-300 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                placeholder="e.g. USA, Mexico, Canada"
-                value={form.cheeringFrom}
-                onChange={set('cheeringFrom')}
-              />
+            {/* Row: Cheering from + Phone */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-blue-200 uppercase tracking-wide mb-1.5">
+                  Cheering From <span className="text-blue-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/25 text-white placeholder-blue-300 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  placeholder="e.g. USA, Mexico, Canada"
+                  value={form.cheeringFrom}
+                  onChange={set('cheeringFrom')}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-blue-200 uppercase tracking-wide mb-1.5">
+                  Phone <span className="text-blue-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/25 text-white placeholder-blue-300 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  type="tel"
+                  placeholder="e.g. 4048278509"
+                  value={form.phone}
+                  onChange={set('phone')}
+                />
+              </div>
             </div>
 
             {error && (

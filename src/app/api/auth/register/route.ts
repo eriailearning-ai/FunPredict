@@ -11,11 +11,12 @@ const schema = z.object({
   username:     z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, underscores'),
   name:         z.string().min(2).max(60),
   email:        z.string().email(),
-  phone:        z.string().max(20).optional().default('').transform(v => v.replace(/\D/g, '')),
+
   password:     z.string().min(8),
   nickname:     z.string().min(2).max(40),
   league:       z.string().refine(v => LEAGUES.includes(v), { message: 'Invalid league' }),
   cheeringFrom: z.string().max(60).optional().default(''),
+  phone:        z.string().max(30).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -28,53 +29,24 @@ export async function POST(req: NextRequest) {
     const existingUsername = await prisma.user.findUnique({ where: { username: body.username } })
     if (existingUsername) return NextResponse.json({ error: 'Username already taken' }, { status: 400 })
 
-    if (body.phone) {
-      try {
-        const existingPhone = await prisma.user.findUnique({ where: { phone: body.phone } })
-        if (existingPhone) return NextResponse.json({ error: 'Phone number already registered' }, { status: 400 })
-      } catch {
-        // phone column not yet in DB — skip check
-      }
-    }
-
     const token = generateToken()
     const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
-    let user
-    try {
-      user = await prisma.user.create({
-        data: {
-          name:         body.name,
-          email:        body.email,
-          username:     body.username,
-          phone:        body.phone || null,
-          nickname:     body.nickname,
-          league:       body.league,
-          cheeringFrom: body.cheeringFrom ?? '',
-          password:     await hashPassword(body.password),
-          verifyToken:  token,
-          verifyExpiry: expiry,
-          status:       'pending',
-        },
-      })
-    } catch (e: any) {
-      // Fallback: phone column not in DB yet — create without phone
-      console.error('[register] user.create with phone failed, retrying without phone:', e?.message)
-      user = await prisma.user.create({
-        data: {
-          name:         body.name,
-          email:        body.email,
-          username:     body.username,
-          nickname:     body.nickname,
-          league:       body.league,
-          cheeringFrom: body.cheeringFrom ?? '',
-          password:     await hashPassword(body.password),
-          verifyToken:  token,
-          verifyExpiry: expiry,
-          status:       'pending',
-        },
-      })
-    }
+    const user = await prisma.user.create({
+      data: {
+        name:         body.name,
+        email:        body.email,
+        username:     body.username,
+        nickname:     body.nickname,
+        league:       body.league,
+        cheeringFrom: body.cheeringFrom ?? '',
+        phone:        body.phone ?? null,
+        password:     await hashPassword(body.password),
+        verifyToken:  token,
+        verifyExpiry: expiry,
+        status:       'pending',
+      },
+    })
 
     const base = process.env.NEXTAUTH_URL ?? 'http://localhost:4001'
     // NOTE: points to /api/auth/verify (the API route handler), not /auth/verify (a page)

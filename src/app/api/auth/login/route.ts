@@ -38,25 +38,12 @@ export async function POST(req: NextRequest) {
 
     if (!identifier) {
       if (isForm) return errRedirect('invalid')
-      return NextResponse.json({ error: 'Username, email or phone required' }, { status: 400 })
+      return NextResponse.json({ error: 'Username or email required' }, { status: 400 })
     }
 
-    // Normalize: if identifier looks like a phone (all digits), strip non-digits for lookup
-    const phoneVariant = identifier.replace(/\D/g, '')
-
-    // Try email + username + phone; fall back if phone column not yet migrated
-    let user = null
-    try {
-      user = await prisma.user.findFirst({
-        where: { OR: [{ email: identifier }, { username: identifier }, { phone: phoneVariant }] },
-      })
-    } catch (e: any) {
-      // phone column not yet in DB — fall back to email/username only
-      console.warn('[login] phone lookup failed, falling back:', e?.message)
-      user = await prisma.user.findFirst({
-        where: { OR: [{ email: identifier }, { username: identifier }] },
-      })
-    }
+    const user = await prisma.user.findFirst({
+      where: { OR: [{ email: identifier }, { username: identifier }] },
+    })
 
     if (!user) {
       if (isForm) return errRedirect('notfound')

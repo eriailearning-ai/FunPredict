@@ -7,7 +7,7 @@ function LoginForm() {
   const params = useSearchParams()
   const verified = params.get('verified') === '1'
   const errorMsg: Record<string, { text: string; hint?: string }> = {
-    notfound: { text: 'No account found with that email, username or phone.', hint: 'Double-check your details or register a new account.' },
+    notfound: { text: 'No account found with that email or username.', hint: 'Double-check your details or register a new account.' },
     wrongpw:  { text: 'Incorrect password.', hint: 'forgot-password' },
     invalid:  { text: 'Invalid username/email or password.' },
     pending:  { text: 'Please verify your email before logging in.', hint: 'Check your inbox (and spam folder) for the verification link.' },
@@ -81,7 +81,7 @@ function LoginForm() {
             <form action="/api/auth/login" method="POST" className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-blue-100 mb-1.5">
-                  Username, Email or Phone
+                  Username or Email
                 </label>
                 <input
                   className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/25 text-white placeholder-blue-300 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
@@ -89,7 +89,7 @@ function LoginForm() {
                   name="identifier"
                   required
                   autoComplete="username"
-                  placeholder="Enter username, email or phone"
+                  placeholder="Enter username or email"
                 />
               </div>
               <div>

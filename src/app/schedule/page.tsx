@@ -7,20 +7,22 @@ import { prisma } from '@/lib/db'
 import { toIso2 } from '@/lib/flags'
 import { stageName } from '@/lib/fmt'
 import LocalTime from '@/components/ui/LocalTime'
+import ScrollToToday from '@/components/ui/ScrollToToday'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
-/** Short date label like "Thu, Jun 12" */
+/** Short date label like "Thu, Jun 12" — always in ET so grouping matches FIFA */
 function fmtDayShort(d: Date | string): string {
   return new Date(d).toLocaleDateString('en-US', {
     weekday: 'short', day: 'numeric', month: 'short',
+    timeZone: 'America/New_York',
   })
 }
 
-/** "YYYY-MM-DD" key for grouping */
+/** "YYYY-MM-DD" key for grouping — ET date so late-night matches fall on the right day */
 function dayKey(d: Date | string): string {
-  return new Date(d).toISOString().slice(0, 10)
+  return new Date(d).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 }
 
 export default async function SchedulePage() {
@@ -34,7 +36,8 @@ export default async function SchedulePage() {
 
   const isApproved = (session as any)?.status === 'approved'
 
-  // Group by day
+  // Group by day (ET)
+  const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const byDate: Record<string, typeof matches> = {}
   for (const m of matches) {
     const k = dayKey(m.matchDate)
@@ -47,6 +50,7 @@ export default async function SchedulePage() {
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>
       <Navbar user={session ? { name: session.name, nickname: (session as any).nickname, role: session.role } : null} />
       <SiteBanner />
+      <ScrollToToday />
 
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6">
         <nav className="text-xs text-gray-400 mb-4">
@@ -82,7 +86,7 @@ export default async function SchedulePage() {
         ) : (
           <div className="space-y-6">
             {dayKeys.map(dk => (
-              <div key={dk}>
+              <div key={dk} id={dk === todayKey ? 'today' : undefined} style={dk === todayKey ? { scrollMarginTop: 80 } : undefined}>
                 {/* Day header */}
                 <div className="flex items-center gap-3 mb-2">
                   <div className="h-px flex-1 bg-gray-200" />

@@ -59,10 +59,10 @@ function isLockedByTime(matchDate: string) {
   return Date.now() >= new Date(matchDate).getTime() - 15 * 60 * 1000
 }
 function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })
 }
 function fmtDayFull(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()
+  return new Date(d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' }).toUpperCase()
 }
 function countdown(d: string) {
   const diff = new Date(d).getTime() - Date.now()
@@ -95,7 +95,7 @@ export default function PredictionsClient({
   const [saving,  setSaving]  = useState<number | null>(null)
   const [saved,   setSaved]   = useState<Record<number, boolean>>({})
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>(() => ({
-    [fmtDate(new Date().toISOString())]: true,
+    [new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })]: true,
   }))
   const [tab, setTab]         = useState(isLoggedIn ? 1 : 0)
   const [rulesOpen, setRulesOpen] = useState(false)
@@ -267,7 +267,7 @@ export default function PredictionsClient({
     byDate[key].push(m)
   }
   const dateKeys = Object.keys(byDate)
-  const todayKey = fmtDate(new Date().toISOString())
+  const todayKey = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })
 
   return (
     <div className="min-h-screen" style={{ background: '#f4f6fb' }}>

@@ -120,9 +120,9 @@ export async function getSidebarData(opts?: {
     topPerformers = fullBoard
   }
 
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const toSidebarMatch = (m: any): SidebarMatch => {
-    const matchDay = new Date(m.matchDate).toISOString().slice(0, 10)
+    const matchDay = new Date(m.matchDate).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
     return {
       id: m.id,
       homeTeam: { name: m.homeTeam.name, code: m.homeTeam.code, flag: isoFlag(m.homeTeam.code) },

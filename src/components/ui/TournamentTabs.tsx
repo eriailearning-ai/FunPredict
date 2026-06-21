@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import FlagImg from '@/components/ui/FlagImg'
 import Link from 'next/link'
 import { fmtTime, stageName } from '@/lib/fmt'
@@ -18,23 +18,32 @@ export interface MatchRow {
   awayScore: number | null
 }
 
-/** "Thursday 11 June 2026" */
+/** "Thursday 11 June 2026" — ET so heading matches FIFA date */
 function fmtDayHeading(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    timeZone: 'America/New_York',
   })
 }
 
 export default function TournamentTabs({ matches }: { matches: MatchRow[] }) {
   const [tab, setTab] = useState<'byday' | 'bracket'>('byday')
 
-  /* ── Group by calendar day ── */
+  /* ── Auto-scroll to today on mount ── */
+  const todayKey = useMemo(() =>
+    new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }), [])
+
+  useEffect(() => {
+    if (tab !== 'byday') return
+    const el = document.getElementById('match-today')
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200)
+  }, [tab])
+
+  /* ── Group by ET calendar day (matches FIFA's date display) ── */
   const { byDay, dayKeys } = useMemo(() => {
     const acc: Record<string, MatchRow[]> = {}
     for (const m of matches) {
-      // Use LOCAL date so matches don't slip into the wrong day due to UTC offset
-      const d = new Date(m.matchDate)
-      const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const day = new Date(m.matchDate).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
       if (!acc[day]) acc[day] = []
       acc[day].push(m)
     }
@@ -81,7 +90,7 @@ export default function TournamentTabs({ matches }: { matches: MatchRow[] }) {
             const heading = fmtDayHeading(day)
 
             return (
-              <div key={day} className="mb-1">
+              <div key={day} className="mb-1" id={day === todayKey ? 'match-today' : undefined} style={day === todayKey ? { scrollMarginTop: 80 } : undefined}>
                 {/* Date strip — light gray, FIFA style */}
                 <div className="flex items-center justify-between px-5 py-3" style={{ background: '#f5f5f5' }}>
                   <span className="text-base font-semibold text-gray-900">{heading}</span>

@@ -30,9 +30,9 @@ function MatchCard({ m }: { m: LiveMatch }) {
   const isFinished = m.status === 'finished'
   const hasScore   = isLive || isFinished
 
-  const today = new Date().toISOString().slice(0, 10)
-  const matchDay = new Date(m.matchDate).toISOString().slice(0, 10)
-  const dayLabel = matchDay === today ? 'Today' : new Date(m.matchDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const matchDay = new Date(m.matchDate).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  const dayLabel = matchDay === today ? 'Today' : new Date(m.matchDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' })
 
   return (
     <div className="flex-shrink-0 w-72 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">

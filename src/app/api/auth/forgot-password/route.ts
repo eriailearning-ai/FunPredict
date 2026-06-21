@@ -95,13 +95,18 @@ export async function POST(req: NextRequest) {
     const base = process.env.NEXTAUTH_URL ?? new URL(req.url).origin
     const resetUrl = `${base}/auth/reset-password?token=${token}`
 
-    // 5. Fire-and-forget email — token is already saved, return OK immediately.
-    //    Vercel hobby has a 10s function limit; awaiting email risks hitting that ceiling.
-    //    If email doesn't arrive the user can request again (token stays valid 1h).
+    // 5. Send email — await with 7s budget (DB ops above take ~0.5s when warm,
+    //    leaving plenty of headroom under Vercel's 10s limit)
     if (emailEnabled()) {
-      sendEmail(user.email, 'Reset your FIFAFun password', resetEmailHtml(user.name, resetUrl))
-        .then(() => console.log('[forgot-password] Reset email sent to', user!.email))
-        .catch(e => console.error('[forgot-password] Email send failed (non-fatal):', e))
+      try {
+        await withTimeout(
+          sendEmail(user.email, 'Reset your FIFAFun password', resetEmailHtml(user.name, resetUrl)),
+          7_000, 'sendEmail'
+        )
+        console.log('[forgot-password] Reset email sent to', user!.email)
+      } catch (e) {
+        console.error('[forgot-password] Email send failed (non-fatal):', e)
+      }
     } else {
       console.log('[forgot-password] SMTP disabled — reset URL:', resetUrl)
     }

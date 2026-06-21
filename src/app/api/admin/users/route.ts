@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAdmin } from '@/lib/auth'
-import { generateToken } from '@/lib/auth'
+import { requireAdmin, generateToken, hashPassword } from '@/lib/auth'
 import { sendEmail, emailEnabled, verifyEmailHtml, approvedEmailHtml, deniedEmailHtml } from '@/lib/email'
 
 const BASE       = process.env.NEXTAUTH_URL ?? 'http://localhost:4001'
@@ -57,6 +56,18 @@ export async function PATCH(req: NextRequest) {
       '🎉 You\'re approved — FIFAFun 2026!',
       approvedEmailHtml(user.name, BASE + '/auth/login'),
     ).catch(() => {})
+    return NextResponse.json({ ok: true })
+  }
+
+  /* ── reset_password: admin sets a new password for any player ── */
+  if (action === 'reset_password') {
+    const { newPassword } = body
+    if (!newPassword || newPassword.length < 8)
+      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
+    await prisma.user.update({
+      where: { id: userId },
+      data:  { password: await hashPassword(newPassword) },
+    })
     return NextResponse.json({ ok: true })
   }
 

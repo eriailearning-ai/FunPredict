@@ -32,6 +32,31 @@ export default function AdminUsersPage() {
   const [deleting, setDeleting] = useState(false)
   const [deleteErr, setDeleteErr] = useState('')
 
+  // Reset password modal
+  const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null)
+  const [newPw, setNewPw]             = useState('')
+  const [confirmPw, setConfirmPw]     = useState('')
+  const [resetting, setResetting]     = useState(false)
+  const [resetMsg, setResetMsg]       = useState('')
+  const [resetErr, setResetErr]       = useState('')
+
+  async function submitResetPassword() {
+    if (newPw !== confirmPw) { setResetErr('Passwords do not match'); return }
+    if (newPw.length < 8)    { setResetErr('Minimum 8 characters'); return }
+    setResetting(true); setResetErr(''); setResetMsg('')
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: resetTarget!.id, action: 'reset_password', newPassword: newPw }),
+    })
+    const data = await res.json()
+    setResetting(false)
+    if (!res.ok) { setResetErr(data.error ?? 'Failed'); return }
+    setResetMsg('Password updated!')
+    setNewPw(''); setConfirmPw('')
+    setTimeout(() => { setResetTarget(null); setResetMsg('') }, 1500)
+  }
+
   async function load() {
     setLoading(true)
     const res = await fetch('/api/admin/users')
@@ -177,7 +202,54 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* ── Delete confirm modal ── */}
+      {/* ── Reset Password modal ── */}
+      {resetTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <h2 className="text-lg font-black text-gray-900 mb-1">🔑 Reset Password</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Set a new password for <strong>{resetTarget.name}</strong>.
+            </p>
+            {resetMsg && <p className="text-green-600 text-sm font-semibold mb-3">✅ {resetMsg}</p>}
+            {resetErr && <p className="text-red-500 text-sm mb-3">{resetErr}</p>}
+            <div className="space-y-3 mb-4">
+              <input
+                type="password"
+                placeholder="New password (min 8 chars)"
+                value={newPw}
+                onChange={e => setNewPw(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <input
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPw}
+                onChange={e => setConfirmPw(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              {newPw && confirmPw && newPw !== confirmPw && (
+                <p className="text-xs text-red-500">Passwords do not match</p>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setResetTarget(null); setNewPw(''); setConfirmPw(''); setResetErr(''); setResetMsg('') }}
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 text-sm font-semibold text-gray-700 hover:bg-gray-200">
+                Cancel
+              </button>
+              <button
+                onClick={submitResetPassword}
+                disabled={resetting || !newPw || !confirmPw || newPw !== confirmPw}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                style={{ background: '#8b1c2c' }}>
+                {resetting ? 'Saving…' : 'Update Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete confirm modal ── */}}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
@@ -337,34 +409,35 @@ export default function AdminUsersPage() {
                               className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50">✗ Deny</button>
                           </>
                         )}
+                        {/* Reset password — available for all non-admin users */}
+                        {u.role !== 'admin' && (
+                          <button
+                            onClick={() => { setResetTarget({ id: u.id, name: u.name }); setNewPw(''); setConfirmPw(''); setResetErr(''); setResetMsg('') }}
+                            className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50">
+                            🔑 Reset PW
+                          </button>
+                        )}
                         {u.status === 'approved' && u.role !== 'admin' && (
                           <button onClick={() => act(u.id, 'deny')} disabled={!!acting}
-                            className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50">Revoke</button>
+                            className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50">
+                            ✗ Revoke
+                          </button>
                         )}
-                        {u.status === 'denied' && (
-                          <button onClick={() => act(u.id, 'approve')} disabled={!!acting}
-                            className="text-xs text-green-600 hover:text-green-800 px-2 py-1 rounded hover:bg-green-50">Re-approve</button>
-                        )}
-                        {u.role === 'player' && u.status === 'approved' && (
-                          <>
-                            <button onClick={() => act(u.id, 'make_admin')} disabled={!!acting}
-                              className="text-xs text-yellow-600 hover:text-yellow-800 px-2 py-1 rounded hover:bg-yellow-50">Make admin</button>
-                            <button onClick={() => act(u.id, 'make_superplayer')} disabled={!!acting}
-                              className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50">⭐ SuperPlayer</button>
-                          </>
+                        {u.role !== 'admin' && u.role !== 'superplayer' && (
+                          <button onClick={() => act(u.id, 'make_superplayer')} disabled={!!acting}
+                            className="text-xs text-indigo-500 hover:text-indigo-700 px-2 py-1 rounded hover:bg-indigo-50">
+                            ⭐ Super
+                          </button>
                         )}
                         {u.role === 'superplayer' && (
                           <button onClick={() => act(u.id, 'make_player')} disabled={!!acting}
-                            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-50">Remove ⭐</button>
-                        )}
-                        {u.role === 'admin' && (
-                          <button onClick={() => act(u.id, 'make_player')} disabled={!!acting}
-                            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-50">Demote</button>
+                            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-50">
+                            ↓ Player
+                          </button>
                         )}
                         {u.role !== 'admin' && (
                           <button onClick={() => setDeleteTarget({ id: u.id, name: u.name })}
-                            className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 ml-1"
-                            title="Delete player">
+                            className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50">
                             🗑
                           </button>
                         )}
@@ -372,9 +445,6 @@ export default function AdminUsersPage() {
                     </td>
                   </tr>
                 ))}
-                {filtered.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 text-sm">No users match this filter</td></tr>
-                )}
               </tbody>
             </table>
           </div>

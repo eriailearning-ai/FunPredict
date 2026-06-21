@@ -6,9 +6,9 @@ function makeTransport() {
     host:              process.env.EMAIL_SERVER_HOST,
     port:              Number(process.env.EMAIL_SERVER_PORT ?? 587),
     secure:            Number(process.env.EMAIL_SERVER_PORT) === 465,
-    connectionTimeout: 6_000,
-    greetingTimeout:   6_000,
-    socketTimeout:     8_000,
+    connectionTimeout: 3_000,
+    greetingTimeout:   3_000,
+    socketTimeout:     4_000,
     auth: {
       user: process.env.EMAIL_SERVER_USER,
       pass: process.env.EMAIL_SERVER_PASSWORD,
@@ -29,7 +29,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
     return
   }
   const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('sendEmail timed out after 8s')), 8_000)
+    setTimeout(() => reject(new Error('sendEmail timed out after 4s')), 4_000)
   )
   await Promise.race([
     makeTransport().sendMail({ from: `"FIFAFun 2026 Admin" <${process.env.EMAIL_FROM}>`, to, subject, html }),

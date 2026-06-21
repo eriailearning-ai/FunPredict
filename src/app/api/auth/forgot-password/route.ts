@@ -49,12 +49,12 @@ export async function POST(req: NextRequest) {
     }
     if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
-    // 2. Find user — 5s timeout on DB
+    // 2. Find user — 4s timeout on DB
     let user: { id: string; name: string; email: string } | null = null
     try {
       user = await withTimeout(
         prisma.user.findUnique({ where: { email } }),
-        5_000, 'DB findUnique'
+        4_000, 'DB findUnique'
       )
     } catch (e) {
       console.error('[forgot-password] DB lookup failed/timed out:', e)
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     try {
       await withTimeout(
         prisma.user.update({ where: { id: user.id }, data: { resetToken: token, resetExpiry: expiry } }),
-        4_000, 'DB update resetToken'
+        3_000, 'DB update resetToken'
       )
       saved = true
     } catch (e) {
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       try {
         await withTimeout(
           prisma.user.update({ where: { id: user.id }, data: { verifyToken: RESET_PREFIX + token, verifyExpiry: expiry } }),
-          4_000, 'DB update verifyToken fallback'
+          3_000, 'DB update verifyToken fallback'
         )
         saved = true
       } catch (e) {
@@ -95,17 +95,13 @@ export async function POST(req: NextRequest) {
     const base = process.env.NEXTAUTH_URL ?? new URL(req.url).origin
     const resetUrl = `${base}/auth/reset-password?token=${token}`
 
-    // 5. Send email — await it (8s budget), errors are swallowed so we always return ok
+    // 5. Fire-and-forget email — token is already saved, return OK immediately.
+    //    Vercel hobby has a 10s function limit; awaiting email risks hitting that ceiling.
+    //    If email doesn't arrive the user can request again (token stays valid 1h).
     if (emailEnabled()) {
-      try {
-        await withTimeout(
-          sendEmail(user.email, 'Reset your FIFAFun password', resetEmailHtml(user.name, resetUrl)),
-          8_000, 'sendEmail'
-        )
-        console.log('[forgot-password] Reset email sent to', user!.email)
-      } catch (e) {
-        console.error('[forgot-password] Email send failed (non-fatal):', e)
-      }
+      sendEmail(user.email, 'Reset your FIFAFun password', resetEmailHtml(user.name, resetUrl))
+        .then(() => console.log('[forgot-password] Reset email sent to', user!.email))
+        .catch(e => console.error('[forgot-password] Email send failed (non-fatal):', e))
     } else {
       console.log('[forgot-password] SMTP disabled — reset URL:', resetUrl)
     }

@@ -29,7 +29,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
     return
   }
   const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('sendEmail timed out after 8s')), 8_000)
+    setTimeout(() => reject(new Error('sendEmail timed out after 5s')), 5_000)
   )
   await Promise.race([
     makeTransport().sendMail({ from: process.env.EMAIL_FROM, to, subject, html }),

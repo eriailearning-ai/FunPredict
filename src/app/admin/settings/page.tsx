@@ -202,6 +202,49 @@ export default function AdminSettingsPage() {
       </button>
 
       <ChangePasswordCard />
+
+      <DbMigrateCard />
+    </div>
+  )
+}
+
+// ─── DB Migration Card ────────────────────────────────────────
+function DbMigrateCard() {
+  const [running, setRunning] = useState(false)
+  const [results, setResults] = useState<string[]>([])
+  const [err, setErr]         = useState('')
+
+  async function run() {
+    setRunning(true); setResults([]); setErr('')
+    try {
+      const res = await fetch('/api/admin/db-migrate', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) { setErr(data.error ?? 'Failed'); return }
+      setResults(data.results ?? [])
+    } catch {
+      setErr('Request failed')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-5">
+      <h2 className="text-sm font-bold text-gray-800 mb-1">🛠 Database Migration</h2>
+      <p className="text-xs text-gray-500 mb-4">
+        Run this once on a new deployment to add missing columns (resetToken, phone, etc.). Safe to run multiple times.
+      </p>
+      {err && <p className="text-sm text-red-600 mb-3">{err}</p>}
+      {results.length > 0 && (
+        <div className="mb-3 bg-gray-50 rounded-lg p-3 text-xs font-mono space-y-1">
+          {results.map((r, i) => <div key={i}>{r}</div>)}
+        </div>
+      )}
+      <button onClick={run} disabled={running}
+        className="px-5 py-2 rounded-lg text-white text-sm font-bold disabled:opacity-50 hover:opacity-90"
+        style={{ background: '#374151' }}>
+        {running ? 'Running…' : 'Run Migration'}
+      </button>
     </div>
   )
 }

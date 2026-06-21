@@ -40,7 +40,6 @@ export async function POST(req: NextRequest) {
         nickname:     body.nickname,
         league:       body.league,
         cheeringFrom: body.cheeringFrom ?? '',
-        phone:        body.phone ?? null,
         password:     await hashPassword(body.password),
         verifyToken:  token,
         verifyExpiry: expiry,

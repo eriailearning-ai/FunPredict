@@ -92,28 +92,26 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. Build reset URL and respond IMMEDIATELY — email sends after
+    // 4. Build reset URL
     const base = process.env.NEXTAUTH_URL ?? new URL(req.url).origin
     const resetUrl = `${base}/auth/reset-password?token=${token}`
 
-    // Return success right away so Vercel doesn't time out the response
-    const response = NextResponse.json({ ok: true, ...(emailEnabled() ? {} : { resetUrl }) })
-
-    // 5. Send email — best-effort with 4s timeout, errors are logged only
+    // 5. Send email — await it (8s budget), errors are swallowed so we always return ok
     if (emailEnabled()) {
-      withTimeout(
-        sendEmail(user.email, 'Reset your FIFAFun password', resetEmailHtml(user.name, resetUrl)),
-        4_000, 'sendEmail'
-      ).then(() => {
+      try {
+        await withTimeout(
+          sendEmail(user.email, 'Reset your FIFAFun password', resetEmailHtml(user.name, resetUrl)),
+          8_000, 'sendEmail'
+        )
         console.log('[forgot-password] Reset email sent to', user!.email)
-      }).catch(e => {
-        console.error('[forgot-password] Email send failed:', e)
-      })
+      } catch (e) {
+        console.error('[forgot-password] Email send failed (non-fatal):', e)
+      }
     } else {
       console.log('[forgot-password] SMTP disabled — reset URL:', resetUrl)
     }
 
-    return response
+    return NextResponse.json({ ok: true, ...(emailEnabled() ? {} : { resetUrl }) })
 
   } catch (err) {
     console.error('[forgot-password] Unexpected error:', err)

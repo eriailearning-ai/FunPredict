@@ -1,10 +1,13 @@
 import { PrismaClient } from '@prisma/client'
 import { Pool, neonConfig } from '@neondatabase/serverless'
 import { PrismaNeon } from '@prisma/adapter-neon'
-import ws from 'ws'
 
-// Neon WebSocket driver — replaces TCP so cold-start is ~100ms instead of 3-7s
-neonConfig.webSocketConstructor = ws
+// Use native WebSocket in Node 21+; fall back to the 'ws' package for Node 18/20
+// require() keeps webpack from statically bundling the native module
+if (typeof WebSocket === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  neonConfig.webSocketConstructor = require('ws')
+}
 
 function makePrisma() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })

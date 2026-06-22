@@ -46,13 +46,16 @@ export async function POST() {
       return NextResponse.json({ ok: true, updated: 0, skipped: 0, notFound: 0, message: 'No bonus answers found' })
     }
 
-    // 3. Fetch all relevant predictions in one bulk query
+    // 3. Fetch all relevant predictions via raw SQL (scorerPred not in old Prisma client)
     const matchIds  = [...new Set(entries.map(e => e.matchId))]
     const userIds   = [...new Set(entries.map(e => e.userId))]
-    const predictions = await prisma.prediction.findMany({
-      where: { matchId: { in: matchIds }, userId: { in: userIds } },
-      select: { id: true, matchId: true, userId: true, scorerPred: true } as any,
-    })
+    const predictions: any[] = await prisma.$queryRawUnsafe(
+      `SELECT id, "matchId", "userId", "scorerPred"
+       FROM "Prediction"
+       WHERE "matchId" = ANY($1::int[])
+         AND "userId"  = ANY($2::text[])`,
+      matchIds, userIds
+    )
 
     // Build map: "userId:matchId" -> prediction
     const predMap = new Map<string, any>()

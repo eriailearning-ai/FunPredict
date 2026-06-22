@@ -20,47 +20,56 @@ export async function POST() {
   try {
     await requireAdmin()
 
-    // 1. All finished matches with a recorded score
-    const finishedMatches = await prisma.match.findMany({
-      where: { status: 'finished', homeScore: { not: null }, awayScore: { not: null } },
-    })
+    // 1. All finished matches with a recorded score — raw SQL to get `scorers` array
+    //    (Prisma client may be older than schema, so use raw to avoid field-unknown errors)
+    const finishedMatches: any[] = await prisma.$queryRawUnsafe(
+      `SELECT id, "homeScore", "awayScore", scorers
+       FROM "Match"
+       WHERE status = 'finished'
+         AND "homeScore" IS NOT NULL
+         AND "awayScore" IS NOT NULL`
+    )
 
     if (finishedMatches.length === 0) {
       return NextResponse.json({ ok: true, matchesProcessed: 0, predictionsChecked: 0, predictionsUpdated: 0 })
     }
 
-    const matchIds = finishedMatches.map(m => m.id)
+    const matchIds = finishedMatches.map((m: any) => m.id)
 
-    // 2. All predictions for those matches in one query
-    const predictions = await prisma.prediction.findMany({
-      where: { matchId: { in: matchIds } },
-    })
+    // 2. All predictions for those matches — raw SQL to get `scorerPred`
+    const predictions: any[] = await prisma.$queryRawUnsafe(
+      `SELECT id, "matchId", "homeScore", "awayScore", joker, points, "scorerPred"
+       FROM "Prediction"
+       WHERE "matchId" = ANY($1::int[])`,
+      matchIds
+    )
 
     // 3. Build match lookup
-    const matchMap = new Map(finishedMatches.map(m => [m.id, m]))
+    const matchMap = new Map(finishedMatches.map((m: any) => [m.id, m]))
 
     // 4. Recalculate and collect rows that need updating
     const updates: { id: number; points: number }[] = []
 
     for (const pred of predictions) {
-      const match = matchMap.get(pred.matchId)
+      const match = matchMap.get(Number(pred.matchId))
       if (!match || match.homeScore === null || match.awayScore === null) continue
 
       const scorerSet = new Set(
-        ((match as any).scorers ?? []).map((s: string) => s.toLowerCase().trim()).filter(Boolean)
+        (match.scorers ?? []).map((s: string) => s.toLowerCase().trim()).filter(Boolean)
       )
-      const scorerPred: string = (pred as any).scorerPred ?? ''
+      const scorerPred: string = pred.scorerPred ?? ''
       const scorerCorrect = !!scorerPred && scorerSet.has(scorerPred.toLowerCase().trim())
 
+      // Raw SQL returns BigInt for numeric columns — coerce to Number
       const points = calcPoints(
-        pred.homeScore, pred.awayScore,
-        match.homeScore, match.awayScore,
-        pred.joker,
+        Number(pred.homeScore), Number(pred.awayScore),
+        Number(match.homeScore), Number(match.awayScore),
+        Boolean(pred.joker),
         scorerCorrect,
       )
 
-      if (points !== pred.points) {
-        updates.push({ id: pred.id, points })
+      if (points !== Number(pred.points)) {
+        updates.push({ id: Number(pred.id), points })
       }
     }
 

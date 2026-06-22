@@ -6,11 +6,13 @@ type Match = {
   id: number; homeTeam: Team; awayTeam: Team
   matchDate: string; group: string; stage: string
   status: string; homeScore: number | null; awayScore: number | null; locked: boolean
+  scorers: string[]
 }
 
 export default function AdminResultsPage() {
   const [matches, setMatches] = useState<Match[]>([])
   const [scores, setScores] = useState<Record<number, { h: string; a: string }>>({})
+  const [scorers, setScorers] = useState<Record<number, string>>({})
   const [saving, setSaving] = useState<number | null>(null)
   const [saved, setSaved]   = useState<Record<number, boolean>>({})
   const [loading, setLoading] = useState(true)
@@ -25,6 +27,10 @@ export default function AdminResultsPage() {
     setScores(Object.fromEntries(
       data.map(m => [m.id, { h: m.homeScore?.toString() ?? '', a: m.awayScore?.toString() ?? '' }])
     ))
+    // Pre-fill scorer names from DB so re-saving doesn't wipe them
+    setScorers(Object.fromEntries(
+      data.map(m => [m.id, (m.scorers ?? []).join(', ')])
+    ))
     setLoading(false)
   }
 
@@ -32,10 +38,17 @@ export default function AdminResultsPage() {
     const s = scores[matchId]
     if (!s || s.h === '' || s.a === '') return
     setSaving(matchId)
+
+    // Parse comma-separated scorer names into an array
+    const scorerList = (scorers[matchId] ?? '')
+      .split(',')
+      .map(n => n.trim())
+      .filter(Boolean)
+
     await fetch('/api/admin/results', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchId, homeScore: +s.h, awayScore: +s.a }),
+      body: JSON.stringify({ matchId, homeScore: +s.h, awayScore: +s.a, scorers: scorerList }),
     })
     setSaving(null)
     setSaved(x => ({ ...x, [matchId]: true }))
@@ -66,8 +79,8 @@ export default function AdminResultsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Enter Match Results</h1>
       </div>
       <p className="text-sm text-gray-500 mb-5">
-        Prediction points are calculated automatically when you save a result.
-        You can correct any score at any time - points will be re-calculated.
+        Enter final score + who scored. Points auto-calculate: 5 exact / 3 outcome / +2 scorer.
+        You can correct any match at any time.
       </p>
 
       {/* Summary */}
@@ -115,50 +128,52 @@ export default function AdminResultsPage() {
           const time = new Date(m.matchDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 
           return (
-            <div key={m.id} className={'flex items-center gap-3 bg-white rounded-xl px-4 py-3 border shadow-sm ' + (isFinished ? 'border-green-100' : 'border-gray-100')}>
-              {/* Status badge */}
-              <span className={'text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ' + (isFinished ? 'bg-green-100 text-green-700' : 'bg-orange-50 text-orange-600')}>
-                {isFinished ? 'FT' : m.status === 'live' ? 'LIVE' : 'TBD'}
-              </span>
-
-              {/* Group */}
-              <span className="text-xs font-bold text-blue-700 w-6 flex-shrink-0">{m.group}</span>
-
-              {/* Date */}
-              <span className="text-xs text-gray-400 w-20 flex-shrink-0">{date} {time}</span>
-
-              {/* Home team */}
-              <span className="flex-1 text-right text-sm font-semibold text-gray-800 truncate min-w-0">{m.homeTeam.name}</span>
-
-              {/* Score inputs */}
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <input
-                  type="number" min="0" max="30"
-                  value={s.h}
-                  onChange={e => setScores(sc => ({ ...sc, [m.id]: { ...sc[m.id], h: e.target.value } }))}
-                  className="w-10 text-center font-bold border-2 border-gray-200 rounded-lg py-1 text-sm focus:outline-none focus:border-blue-400"
-                  placeholder="0"
-                />
-                <span className="text-gray-400 text-xs font-bold">-</span>
-                <input
-                  type="number" min="0" max="30"
-                  value={s.a}
-                  onChange={e => setScores(sc => ({ ...sc, [m.id]: { ...sc[m.id], a: e.target.value } }))}
-                  className="w-10 text-center font-bold border-2 border-gray-200 rounded-lg py-1 text-sm focus:outline-none focus:border-blue-400"
-                  placeholder="0"
-                />
+            <div key={m.id} className={'bg-white rounded-xl px-4 py-3 border shadow-sm ' + (isFinished ? 'border-green-100' : 'border-gray-100')}>
+              {/* Row 1: status + group + date + teams + score + save */}
+              <div className="flex items-center gap-3">
+                <span className={'text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ' + (isFinished ? 'bg-green-100 text-green-700' : 'bg-orange-50 text-orange-600')}>
+                  {isFinished ? 'FT' : m.status === 'live' ? 'LIVE' : 'TBD'}
+                </span>
+                <span className="text-xs font-bold text-blue-700 w-6 flex-shrink-0">{m.group}</span>
+                <span className="text-xs text-gray-400 w-20 flex-shrink-0">{date} {time}</span>
+                <span className="flex-1 text-right text-sm font-semibold text-gray-800 truncate min-w-0">{m.homeTeam.name}</span>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <input
+                    type="number" min="0" max="30"
+                    value={s.h}
+                    onChange={e => setScores(sc => ({ ...sc, [m.id]: { ...sc[m.id], h: e.target.value } }))}
+                    className="w-10 text-center font-bold border-2 border-gray-200 rounded-lg py-1 text-sm focus:outline-none focus:border-blue-400"
+                    placeholder="0"
+                  />
+                  <span className="text-gray-400 text-xs font-bold">-</span>
+                  <input
+                    type="number" min="0" max="30"
+                    value={s.a}
+                    onChange={e => setScores(sc => ({ ...sc, [m.id]: { ...sc[m.id], a: e.target.value } }))}
+                    className="w-10 text-center font-bold border-2 border-gray-200 rounded-lg py-1 text-sm focus:outline-none focus:border-blue-400"
+                    placeholder="0"
+                  />
+                </div>
+                <span className="flex-1 text-sm font-semibold text-gray-800 truncate min-w-0">{m.awayTeam.name}</span>
+                <button
+                  onClick={() => save(m.id)}
+                  disabled={isSaving || s.h === '' || s.a === ''}
+                  className={'text-xs px-3 py-1.5 rounded-lg font-semibold flex-shrink-0 transition-colors disabled:opacity-40 ' + (isSaved ? 'bg-green-600 text-white' : isFinished ? 'bg-gray-100 text-gray-700 hover:bg-blue-600 hover:text-white border border-gray-200' : 'bg-blue-600 text-white hover:bg-blue-700')}>
+                  {isSaving ? 'Saving...' : isSaved ? 'Saved! ✓' : isFinished ? 'Update' : 'Save'}
+                </button>
               </div>
 
-              {/* Away team */}
-              <span className="flex-1 text-sm font-semibold text-gray-800 truncate min-w-0">{m.awayTeam.name}</span>
-
-              {/* Save button */}
-              <button
-                onClick={() => save(m.id)}
-                disabled={isSaving || s.h === '' || s.a === ''}
-                className={'text-xs px-3 py-1.5 rounded-lg font-semibold flex-shrink-0 transition-colors disabled:opacity-40 ' + (isSaved ? 'bg-green-600 text-white' : isFinished ? 'bg-gray-100 text-gray-700 hover:bg-blue-600 hover:text-white border border-gray-200' : 'bg-blue-600 text-white hover:bg-blue-700')}>
-                {isSaving ? 'Saving...' : isSaved ? 'Saved!' : isFinished ? 'Update' : 'Save'}
-              </button>
+              {/* Row 2: scorer input */}
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-gray-400 flex-shrink-0">⚽ Scorers:</span>
+                <input
+                  type="text"
+                  placeholder="e.g. Messi, Ronaldo, Mbappé  (comma-separated — +2 pts each correct pick)"
+                  value={scorers[m.id] ?? ''}
+                  onChange={e => setScorers(sc => ({ ...sc, [m.id]: e.target.value }))}
+                  className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-400 min-w-0"
+                />
+              </div>
             </div>
           )
         })}

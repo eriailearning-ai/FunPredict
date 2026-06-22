@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
   const { matchId, joker } = body
   const homeScore: number | undefined = body.homeScore
   const awayScore: number | undefined = body.awayScore
+  const scorerPred: string | null = body.scorerPred ?? null
 
   const match = await prisma.match.findUnique({ where: { id: matchId } })
   if (!match) return NextResponse.json({ error: 'Match not found' }, { status: 404 })
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
   if (homeScore !== undefined) updateData.homeScore = homeScore
   if (awayScore !== undefined) updateData.awayScore = awayScore
   if (joker !== undefined)    updateData.joker     = joker
+  if (scorerPred !== undefined) updateData.scorerPred = scorerPred
 
   const prediction = await prisma.prediction.upsert({
     where: { userId_matchId: { userId: user.id, matchId } },
@@ -60,6 +62,7 @@ export async function POST(req: NextRequest) {
       homeScore: homeScore ?? 0,
       awayScore: awayScore ?? 0,
       joker: joker ?? false,
+      scorerPred: scorerPred ?? null,
     },
     update: updateData,
   })

@@ -35,6 +35,10 @@ export async function POST() {
     { col: 'verifyToken',  sql: `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "verifyToken" TEXT` },
     { col: 'verifyExpiry', sql: `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "verifyExpiry" TIMESTAMP(3)` },
     { col: 'nickname',     sql: `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "nickname" TEXT NOT NULL DEFAULT ''` },
+    // Scorer prediction on Prediction table
+    { col: 'Prediction.scorerPred', sql: `ALTER TABLE "Prediction" ADD COLUMN IF NOT EXISTS "scorerPred" TEXT` },
+    // Actual scorers on Match table (persists who scored for display + re-grading)
+    { col: 'Match.scorers', sql: `ALTER TABLE "Match" ADD COLUMN IF NOT EXISTS "scorers" TEXT[] DEFAULT '{}'` },
   ]
 
   const results: string[] = []

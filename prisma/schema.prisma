@@ -86,6 +86,7 @@ model Match {
   awayScore   Int?
   status      String    @default("upcoming")
   locked      Boolean   @default(false)
+  scorers     String[]
   externalId  String?   @unique
 
   homeTeam    Team      @relation("HomeTeam", fields: [homeTeamId], references: [id])
@@ -101,6 +102,7 @@ model Prediction {
   homeScore   Int
   awayScore   Int
   joker       Boolean  @default(false)
+  scorerPred  String?
   points      Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -10,6 +10,12 @@ export default function AdminSyncPage() {
   const [scorerResult, setScorerResult] = useState<any>(null)
   const [seedStatus, setSeedStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
   const [seedResult, setSeedResult] = useState<any>(null)
+  const [migrateStatus, setMigrateStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
+  const [migrateResult, setMigrateResult] = useState<any>(null)
+  const [backfillStatus, setBackfillStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
+  const [backfillResult, setBackfillResult] = useState<any>(null)
+  const [recalcStatus, setRecalcStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
+  const [recalcResult, setRecalcResult] = useState<any>(null)
 
   async function sync() {
     setStatus('syncing')
@@ -46,6 +52,113 @@ export default function AdminSyncPage() {
         Fetches live match results from <strong>football-data.org</strong> and automatically updates the database.
         Predictions are scored immediately. No manual entry needed.
       </p>
+
+      {/* ── DB Migration ── */}
+      <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-purple-400">
+        <h2 className="text-sm font-bold text-gray-800 mb-1">Run DB Migrations</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Adds any missing columns to the database (safe to run multiple times — uses IF NOT EXISTS).
+          Run this once after each deployment that changes the schema.
+        </p>
+        <button
+          onClick={async () => {
+            setMigrateStatus('syncing'); setMigrateResult(null)
+            try {
+              const res = await fetch('/api/admin/db-migrate', { method: 'POST' })
+              const data = await res.json()
+              setMigrateResult(data)
+              setMigrateStatus(data.ok ? 'done' : 'error')
+            } catch (e: any) { setMigrateResult({ error: e.message }); setMigrateStatus('error') }
+          }}
+          disabled={migrateStatus === 'syncing'}
+          className="px-6 py-2.5 rounded-lg text-white font-semibold text-sm disabled:opacity-50 transition-colors"
+          style={{ background: migrateStatus === 'done' ? '#166534' : '#7c3aed' }}
+        >
+          {migrateStatus === 'syncing' ? 'Running…' : migrateStatus === 'done' ? '✅ Migrations done' : '🗄 Run DB Migrations'}
+        </button>
+        {migrateResult && (
+          <div className={`mt-3 p-3 rounded-xl text-sm ${migrateResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            {migrateResult.error
+              ? <p className="text-red-700"><strong>Error:</strong> {migrateResult.error}</p>
+              : <p className="text-green-800">✅ Migrations applied: {JSON.stringify(migrateResult.results ?? migrateResult)}</p>}
+          </div>
+        )}
+      </div>
+
+      {/* ── Backfill scorer predictions from old bonus answers ── */}
+      <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-yellow-400">
+        <h2 className="text-sm font-bold text-gray-800 mb-1">Backfill Scorer Predictions</h2>
+        <p className="text-sm text-gray-500 mb-1">
+          Copies players' old bonus-question scorer answers into the new <code className="bg-gray-100 px-1 rounded text-xs">scorerPred</code> column.
+          Safe to run multiple times — only fills rows that are currently empty.
+        </p>
+        <p className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 mb-4">
+          Run this <strong>after</strong> DB Migrations. Then re-save any finished match results so points recalculate with the +2 scorer bonus.
+        </p>
+        <button
+          onClick={async () => {
+            setBackfillStatus('syncing'); setBackfillResult(null)
+            try {
+              const res = await fetch('/api/admin/backfill-scorer-preds', { method: 'POST' })
+              const data = await res.json()
+              setBackfillResult(data)
+              setBackfillStatus(data.ok ? 'done' : 'error')
+            } catch (e: any) { setBackfillResult({ error: e.message }); setBackfillStatus('error') }
+          }}
+          disabled={backfillStatus === 'syncing'}
+          className="px-6 py-2.5 rounded-lg text-white font-semibold text-sm disabled:opacity-50 transition-colors"
+          style={{ background: backfillStatus === 'done' ? '#166534' : '#d97706' }}
+        >
+          {backfillStatus === 'syncing' ? 'Backfilling…' : backfillStatus === 'done' ? '✅ Backfill done' : '⚽ Backfill Scorer Predictions'}
+        </button>
+        {backfillResult && (
+          <div className={`mt-3 p-3 rounded-xl text-sm ${backfillResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            {backfillResult.error
+              ? <p className="text-red-700"><strong>Error:</strong> {backfillResult.error}</p>
+              : <p className="text-green-800">
+                  ✅ Updated: <strong>{backfillResult.updated}</strong> predictions &nbsp;·&nbsp;
+                  Already set: {backfillResult.skipped} &nbsp;·&nbsp;
+                  No prediction found: {backfillResult.notFound}
+                </p>}
+          </div>
+        )}
+      </div>
+
+      {/* ── Recalculate All Points ── */}
+      <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-400">
+        <h2 className="text-sm font-bold text-gray-800 mb-1">Recalculate All Points</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Re-scores every prediction on every finished match using the current scorer lists.
+          Run this after backfilling scorer predictions to apply the +2 bonus retroactively.
+        </p>
+        <button
+          onClick={async () => {
+            setRecalcStatus('syncing'); setRecalcResult(null)
+            try {
+              const res = await fetch('/api/admin/recalc-points', { method: 'POST' })
+              const data = await res.json()
+              setRecalcResult(data)
+              setRecalcStatus(data.ok ? 'done' : 'error')
+            } catch (e: any) { setRecalcResult({ error: e.message }); setRecalcStatus('error') }
+          }}
+          disabled={recalcStatus === 'syncing'}
+          className="px-6 py-2.5 rounded-lg text-white font-semibold text-sm disabled:opacity-50 transition-colors"
+          style={{ background: recalcStatus === 'done' ? '#166534' : '#059669' }}
+        >
+          {recalcStatus === 'syncing' ? 'Recalculating…' : recalcStatus === 'done' ? '✅ Points recalculated' : '🔢 Recalculate All Points'}
+        </button>
+        {recalcResult && (
+          <div className={`mt-3 p-3 rounded-xl text-sm ${recalcResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            {recalcResult.error
+              ? <p className="text-red-700"><strong>Error:</strong> {recalcResult.error}</p>
+              : <p className="text-green-800">
+                  ✅ Matches processed: <strong>{recalcResult.matchesProcessed}</strong> &nbsp;·&nbsp;
+                  Predictions checked: {recalcResult.predictionsChecked} &nbsp;·&nbsp;
+                  Updated: <strong>{recalcResult.predictionsUpdated}</strong>
+                </p>}
+          </div>
+        )}
+      </div>
 
       {/* API Key setup */}
       <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-400">

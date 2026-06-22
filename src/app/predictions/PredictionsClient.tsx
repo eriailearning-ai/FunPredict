@@ -15,7 +15,7 @@ type Match = {
   homeScore: number | null; awayScore: number | null
   status: string; locked: boolean
 }
-type Pred = { homeScore: number; awayScore: number; joker: boolean; points: number | null }
+type Pred = { homeScore: number; awayScore: number; joker: boolean; points: number | null; scorerPred?: string | null }
 type Performer = { display: string; league: string; cheeringFrom: string; total: number }
 type PollResult = { option: string; count: number; pct: number }
 type Poll = {
@@ -75,7 +75,7 @@ function countdown(d: string) {
   return `Just ${mins} min until`
 }
 
-const TABS = ['PLAY RULES', 'GO PREDICT SCORES', 'AUDIENCE POLL', 'BONUS POINTS', 'SCOREBOARD']
+const TABS = ['PLAY RULES', 'GO PREDICT SCORES', 'MY POINTS', 'AUDIENCE POLL', 'BONUS POINTS', 'SCOREBOARD']
 
 /* ─── Component ─────────────────────────────────────────── */
 export default function PredictionsClient({
@@ -92,6 +92,11 @@ export default function PredictionsClient({
       a: predMap[m.id]?.awayScore?.toString() ?? '',
     }]))
   )
+  /* Scorer state — one per match, synced from predMap on mount */
+  const [scorerPreds, setScorerPreds] = useState<Record<number, string>>(
+    Object.fromEntries(matches.map(m => [m.id, predMap[m.id]?.scorerPred ?? '']))
+  )
+
   const [saving,  setSaving]  = useState<number | null>(null)
   const [saved,   setSaved]   = useState<Record<number, boolean>>({})
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>(() => ({
@@ -181,10 +186,10 @@ export default function PredictionsClient({
   }
 
   useEffect(() => {
-    if (tab === 2 && !pollLoaded) loadPolls()
+    if (tab === 3 && !pollLoaded) loadPolls()
   }, [tab, pollLoaded])
 
-  /* Prediction save */
+  /* Prediction save — includes scorer */
   async function savePred(matchId: number) {
     const p = preds[matchId]
     if (!p || p.h === '' || p.a === '') return
@@ -192,7 +197,12 @@ export default function PredictionsClient({
     await fetch('/api/predictions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchId, homeScore: +p.h, awayScore: +p.a }),
+      body: JSON.stringify({
+        matchId,
+        homeScore: +p.h,
+        awayScore: +p.a,
+        scorerPred: scorerPreds[matchId] || null,
+      }),
     })
     setSaving(null)
     setSaved(s => ({ ...s, [matchId]: true }))
@@ -457,67 +467,62 @@ export default function PredictionsClient({
                                         </div>
                                       )}
 
-                                      {/* Per-match bonus question */}
-                                      {bonus && (
-                                        <div className="mt-3 pt-3 border-t border-gray-100">
-                                          <div className="flex items-start gap-2 mb-1.5">
-                                            <p className="text-xs text-gray-700 font-medium flex-1 leading-snug">
-                                              Name one player who will score in {m.homeTeam.name} vs {m.awayTeam.name}
-                                            </p>
-                                            <span className="flex-shrink-0 text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: '#fef9c3', color: '#92400e' }}>
-                                              2 pts
-                                            </span>
-                                          </div>
-                                          {bonus.status === 'open' && !locked ? (
-                                            <div className="flex gap-2">
-                                              <select
-                                                value={bonusAnswers[m.id] ?? ''}
-                                                onChange={e => setBonusAnswers(s => ({ ...s, [m.id]: e.target.value }))}
-                                                className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-400 min-w-0 bg-white"
-                                              >
-                                                <option value="">— Pick a player —</option>
-                                                {(m as any).homePlayers?.length > 0 && (
-                                                  <optgroup label={m.homeTeam.name}>
-                                                    {(m as any).homePlayers.map((name: string) => (
-                                                      <option key={name} value={name}>{name}</option>
-                                                    ))}
-                                                  </optgroup>
-                                                )}
-                                                {(m as any).awayPlayers?.length > 0 && (
-                                                  <optgroup label={m.awayTeam.name}>
-                                                    {(m as any).awayPlayers.map((name: string) => (
-                                                      <option key={name} value={name}>{name}</option>
-                                                    ))}
-                                                  </optgroup>
-                                                )}
-                                              </select>
-                                              <button
-                                                onClick={() => saveBonusAnswer(m.id, bonus.questionId)}
-                                                disabled={bonusSaving === m.id || !bonusAnswers[m.id]?.trim()}
-                                                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0 disabled:opacity-40 transition-colors"
-                                                style={{ background: bonusSaved[m.id] ? '#166534' : '#8b1c2c' }}>
-                                                {bonusSaving === m.id ? '…' : bonusSaved[m.id] ? '✓' : 'Submit'}
-                                              </button>
-                                            </div>
-                                          ) : (
-                                            <div className="space-y-1">
-                                              {bonus.answer ? (
-                                                <p className="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-white" style={{ background: '#1e3a5f' }}>
-                                                  my answer: {bonus.answer}
-                                                </p>
-                                              ) : (
-                                                <p className="text-xs text-gray-400 italic">No answer submitted</p>
-                                              )}
-                                              <p className="text-xs text-gray-400">
-                                                {locked && bonus.status === 'open'
-                                                  ? 'Locked — match starting soon'
-                                                  : `Closed${bonus.points !== null ? ` · points awarded: ${bonus.points} points` : ' · Pending grading'}${bonus.correctAnswer ? ` · correct: ${bonus.correctAnswer}` : ''}`
-                                                }
-                                              </p>
-                                            </div>
-                                          )}
+                                      {/* ── Scorer prediction (+2 pts) ── */}
+                                      <div className="mt-3 pt-3 border-t border-gray-100">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                          <span className="text-xs text-gray-500 font-medium flex-1">⚽ Who scores?</span>
+                                          <span className="text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: '#fef9c3', color: '#92400e' }}>+2 pts</span>
                                         </div>
-                                      )}
+                                        {!locked ? (
+                                          <select
+                                            value={scorerPreds[m.id] ?? ''}
+                                            onChange={e => setScorerPreds(s => ({ ...s, [m.id]: e.target.value }))}
+                                            className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-400 bg-white"
+                                          >
+                                            <option value="">— Pick a scorer (saved with score) —</option>
+                                            {(m as any).homePlayers?.length > 0 && (
+                                              <optgroup label={m.homeTeam.name}>
+                                                {(m as any).homePlayers.map((name: string) => (
+                                                  <option key={name} value={name}>{name}</option>
+                                                ))}
+                                              </optgroup>
+                                            )}
+                                            {(m as any).awayPlayers?.length > 0 && (
+                                              <optgroup label={m.awayTeam.name}>
+                                                {(m as any).awayPlayers.map((name: string) => (
+                                                  <option key={name} value={name}>{name}</option>
+                                                ))}
+                                              </optgroup>
+                                            )}
+                                          </select>
+                                        ) : (
+                                          <div className="space-y-1">
+                                            {/* Player's pick */}
+                                            <p className="text-xs text-gray-500">
+                                              My pick:{' '}
+                                              {scorerPreds[m.id]
+                                                ? <span className="font-semibold text-gray-700">{scorerPreds[m.id]}</span>
+                                                : <span className="italic text-gray-400">none</span>
+                                              }
+                                            </p>
+                                            {/* Actual scorers (once match is finished) */}
+                                            {m.status === 'finished' && (m as any).scorers?.length > 0 && (
+                                              <p className="text-xs text-gray-500">
+                                                Scored:{' '}
+                                                {(m as any).scorers.map((s: string, i: number) => {
+                                                  const correct = scorerPreds[m.id]?.toLowerCase() === s.toLowerCase()
+                                                  return (
+                                                    <span key={s}>
+                                                      {i > 0 && ', '}
+                                                      <span className={correct ? 'font-bold text-green-600' : ''}>{s}</span>
+                                                    </span>
+                                                  )
+                                                })}
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
 
                                     {/* Right icons column: pie chart + soccer ball joker */}
@@ -591,7 +596,15 @@ export default function PredictionsClient({
               )}
 
               {/* ── AUDIENCE POLL ── */}
+              {/* ── MY POINTS ── */}
               {tab === 2 && (
+                <MyPointsTab
+                  matches={matches}
+                  predMap={predMap}
+                />
+              )}
+
+              {tab === 3 && (
                 <AudiencePollTab
                   polls={polls}
                   loaded={pollLoaded}
@@ -602,12 +615,12 @@ export default function PredictionsClient({
               )}
 
               {/* ── BONUS POINTS ── */}
-              {tab === 3 && (
+              {tab === 4 && (
                 <BonusPointsTab isLoggedIn={isLoggedIn} />
               )}
 
               {/* ── SCOREBOARD ── */}
-              {tab === 4 && (
+              {tab === 5 && (
                 <ScoreboardTab
                   topPerformers={liveTop}
                   leagueScoreboards={leagueScoreboards}
@@ -762,7 +775,7 @@ export default function PredictionsClient({
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3" style={{ background: '#1e3a5f' }}>
                 <span className="text-white text-xs font-bold tracking-widest uppercase">Statistics</span>
-                <button onClick={() => setTab(4)} className="text-yellow-400 text-xs hover:underline">Scoreboard</button>
+                <button onClick={() => setTab(5)} className="text-yellow-400 text-xs hover:underline">Scoreboard</button>
               </div>
               {stats.total === 0 ? (
                 <div className="px-4 py-3">
@@ -894,6 +907,152 @@ function DistPieIcon({ dist, active }: { dist?: PredDist; active?: boolean }) {
     <svg width={size} height={size} viewBox="0 0 24 24" className={`rounded-full transition-all ${active ? 'ring-2 ring-blue-400' : ''}`}>
       {paths}
     </svg>
+  )
+}
+
+/* ─── My Points Tab ────────────────────────────────────── */
+function MyPointsTab({ matches, predMap }: { matches: any[]; predMap: Record<number, any> }) {
+  const finished = matches.filter(m => m.status === 'finished' && predMap[m.id])
+
+  if (finished.length === 0) {
+    return (
+      <div className="bg-white rounded-xl p-8 text-center text-gray-400 text-sm shadow-sm">
+        No finished matches with predictions yet. Points will appear here after matches complete.
+      </div>
+    )
+  }
+
+  // Derive breakdown per match from stored data
+  const rows = finished.map(m => {
+    const pred   = predMap[m.id]
+    const pts    = pred.points ?? 0
+    const joker  = pred.joker  ?? false
+    const scorerPred: string = pred.scorerPred ?? ''
+    const actualScorers: string[] = (m.scorers ?? []) as string[]
+
+    const scorerHit = !!scorerPred &&
+      actualScorers.some(s => s.toLowerCase().trim() === scorerPred.toLowerCase().trim())
+
+    // Determine score outcome label
+    let scoreLabel = ''
+    let baseScore = 0
+    if (pred.homeScore === m.homeScore && pred.awayScore === m.awayScore) {
+      scoreLabel = 'Exact'; baseScore = 5
+    } else {
+      const predSign = Math.sign(pred.homeScore - pred.awayScore)
+      const realSign = Math.sign(m.homeScore - m.awayScore)
+      if (predSign === realSign) {
+        scoreLabel = 'Outcome'; baseScore = 3
+      } else {
+        let partial = 0
+        if (pred.homeScore === m.homeScore) partial++
+        if (pred.awayScore === m.awayScore) partial++
+        scoreLabel = partial > 0 ? `Partial (${partial})` : 'Wrong'
+        baseScore = partial
+      }
+    }
+
+    const scorerBonus = scorerHit ? 2 : 0
+    const raw  = baseScore + scorerBonus
+    const total = joker ? raw * 2 : raw
+
+    return { m, pred, pts, joker, scorerPred, scorerHit, actualScorers, scoreLabel, baseScore, scorerBonus, raw, total }
+  })
+
+  const grandTotal = rows.reduce((s, r) => s + r.total, 0)
+
+  return (
+    <div className="space-y-3">
+      {/* Summary strip */}
+      <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-gray-500">Finished matches with predictions</p>
+          <p className="text-sm font-bold text-gray-800">{finished.length} matches graded</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-gray-500">Total earned</p>
+          <p className="text-3xl font-black" style={{ color: '#1e3a5f' }}>{grandTotal} pts</p>
+        </div>
+      </div>
+
+      {/* Per-match breakdown */}
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr style={{ background: '#1e3a5f' }}>
+                <th className="text-left px-3 py-2.5 text-white font-semibold">Match</th>
+                <th className="text-center px-3 py-2.5 text-white font-semibold">Result</th>
+                <th className="text-center px-3 py-2.5 text-white font-semibold">My pick</th>
+                <th className="text-center px-3 py-2.5 text-yellow-300 font-semibold">Score</th>
+                <th className="text-center px-3 py-2.5 text-yellow-300 font-semibold">⚽</th>
+                <th className="text-center px-3 py-2.5 text-yellow-300 font-semibold">Joker</th>
+                <th className="text-center px-3 py-2.5 text-yellow-400 font-black">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {rows.map(({ m, pred, joker, scorerPred, scorerHit, actualScorers, scoreLabel, baseScore, scorerBonus, total }) => (
+                <tr key={m.id} className="hover:bg-gray-50">
+                  {/* Match */}
+                  <td className="px-3 py-2.5">
+                    <div className="font-medium text-gray-800">{m.homeTeam.name} vs {m.awayTeam.name}</div>
+                    <div className="text-gray-400">{new Date(m.matchDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                  </td>
+                  {/* Result */}
+                  <td className="px-3 py-2.5 text-center font-bold text-gray-700">
+                    {m.homeScore}–{m.awayScore}
+                  </td>
+                  {/* My pick */}
+                  <td className="px-3 py-2.5 text-center text-gray-600">
+                    {pred.homeScore}–{pred.awayScore}
+                  </td>
+                  {/* Score pts */}
+                  <td className="px-3 py-2.5 text-center">
+                    <span className={`font-bold ${baseScore === 5 ? 'text-green-600' : baseScore === 3 ? 'text-blue-600' : baseScore > 0 ? 'text-orange-500' : 'text-gray-400'}`}>
+                      {baseScore}
+                    </span>
+                    <div className={`text-[10px] ${baseScore >= 3 ? 'text-gray-500' : 'text-gray-400'}`}>{scoreLabel}</div>
+                  </td>
+                  {/* Scorer pts */}
+                  <td className="px-3 py-2.5 text-center">
+                    {scorerPred ? (
+                      <div>
+                        <span className={`font-bold ${scorerHit ? 'text-green-600' : 'text-gray-400'}`}>
+                          {scorerHit ? '+2' : '+0'}
+                        </span>
+                        <div className="text-[10px] text-gray-400 truncate max-w-[64px]">{scorerPred}</div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
+                  {/* Joker */}
+                  <td className="px-3 py-2.5 text-center">
+                    {joker
+                      ? <span className="font-bold text-yellow-600">×2</span>
+                      : <span className="text-gray-300">—</span>}
+                  </td>
+                  {/* Total */}
+                  <td className="px-3 py-2.5 text-center">
+                    <span className="text-base font-black" style={{ color: total > 0 ? '#1e3a5f' : '#9ca3af' }}>{total}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{ background: '#f0f4ff' }}>
+                <td colSpan={6} className="px-3 py-2.5 text-right text-xs font-bold text-gray-600">Grand total</td>
+                <td className="px-3 py-2.5 text-center text-lg font-black" style={{ color: '#1e3a5f' }}>{grandTotal}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-400 px-1">
+        Pending matches and ungraded results are not shown. Joker doubles the combined score + scorer bonus.
+      </p>
+    </div>
   )
 }
 
@@ -1172,18 +1331,18 @@ function ScoringRules() {
           You can change predictions until kick-off.
         </p>
         <p className="text-sm text-gray-600">
-          Your total is the sum of points from every finished match plus any bonus questions you answered correctly.
-          Each match can award points as follows:
+          Each match can award up to <strong>7 points</strong> (14 with joker): 5 for exact score + 2 for naming a scorer.
         </p>
       </div>
 
       {/* ── Score grid ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
           { label: 'Exact score',            val: '5'  },
           { label: 'Correct outcome',        val: '3'  },
-          { label: 'Wrong outcome, one team score correct', val: '1' },
-          { label: 'Joker multiplier',       val: 'x2' },
+          { label: 'Wrong outcome, one team correct', val: '1' },
+          { label: 'Name a scorer',          val: '+2' },
+          { label: 'Joker multiplier',       val: '×2' },
         ].map(({ label, val }) => (
           <div key={label} className="rounded-xl p-4 text-center text-white" style={{ background: '#1e3a5f' }}>
             <div className="text-xs text-gray-300 mb-1 leading-tight">{label}</div>
@@ -1194,8 +1353,8 @@ function ScoringRules() {
 
       {/* ── Bullet notes ── */}
       <ul className="text-sm text-gray-600 space-y-2 list-disc list-outside ml-5">
-        <li>Pick one joker per stage to double that match's points.</li>
-        <li>Bonus questions add extra points when confirmed — answer them in the Bonus Points tab.</li>
+        <li>Name one player who will score — pick from the squad dropdown on each match card. Saved together with your score prediction.</li>
+        <li>Pick one joker per stage to double that match's total points (including scorer bonus).</li>
       </ul>
 
       {/* ── Divider ── */}
@@ -1220,6 +1379,8 @@ function ScoringRules() {
                 { pred: 'Wrong outcome, home score correct',  ex: 'Result 2-1 / Predicted 2-2 (draw)',     pts: '1' },
                 { pred: 'Wrong outcome, away score correct',  ex: 'Result 2-1 / Predicted 0-1 (away win)', pts: '1' },
                 { pred: 'Wrong outcome, both scores wrong',   ex: 'Result 2-1 / Predicted 0-2 (away win)', pts: '0' },
+                { pred: 'Named a scorer correctly',           ex: 'Picked Messi — Messi scored',            pts: '+2' },
+                { pred: 'Named a scorer — wrong',             ex: 'Picked Ronaldo — did not score',         pts: '+0' },
               ].map(({ pred, ex, pts }) => (
                 <tr key={pred} className="hover:bg-gray-50">
                   <td className="px-4 py-2.5 text-xs font-medium text-gray-800">{pred}</td>

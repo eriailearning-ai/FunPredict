@@ -26,7 +26,7 @@ export default async function LeaderboardPage() {
   })
 
   const allUsers = await prisma.user.findMany({
-    where: { status: 'approved' },
+    where: { status: 'approved', role: { in: ['player', 'superplayer'] } },
     include: { predictions: { select: { points: true } } },
   }).catch(() => [])
 

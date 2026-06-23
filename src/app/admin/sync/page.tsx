@@ -16,6 +16,9 @@ export default function AdminSyncPage() {
   const [backfillResult, setBackfillResult] = useState<any>(null)
   const [recalcStatus, setRecalcStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
   const [recalcResult, setRecalcResult] = useState<any>(null)
+  const [resetStatus, setResetStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
+  const [resetResult, setResetResult] = useState<any>(null)
+  const [resetConfirm, setResetConfirm] = useState(false)
 
   async function sync() {
     setStatus('syncing')
@@ -249,6 +252,58 @@ export default function AdminSyncPage() {
             {scorerResult.error
               ? <p className="text-red-700"><strong>Error:</strong> {scorerResult.error}</p>
               : <p className="text-green-800">✅ {scorerResult.count} top scorers cached for sidebar.</p>}
+          </div>
+        )}
+      </div>
+
+      {/* ── Reset All Points ── */}
+      <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
+        <h2 className="text-sm font-bold text-gray-800 mb-1">⚠️ Reset All Points to Zero</h2>
+        <p className="text-sm text-gray-500 mb-3">
+          Sets every player's points to 0. Use this before the knockout phase to start a fresh leaderboard.
+          Predictions are kept — only the stored point totals are cleared.
+          <strong className="text-red-600"> This is irreversible.</strong>
+        </p>
+        {!resetConfirm ? (
+          <button
+            onClick={() => setResetConfirm(true)}
+            className="px-6 py-2.5 rounded-lg text-white font-semibold text-sm transition-colors"
+            style={{ background: '#dc2626' }}
+          >
+            🔴 Reset All Points
+          </button>
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-red-700 font-medium">Are you sure? This cannot be undone.</span>
+            <button
+              onClick={async () => {
+                setResetStatus('syncing'); setResetResult(null); setResetConfirm(false)
+                try {
+                  const res = await fetch('/api/admin/reset-points', { method: 'POST' })
+                  const data = await res.json()
+                  setResetResult(data)
+                  setResetStatus(data.ok ? 'done' : 'error')
+                } catch (e: any) { setResetResult({ error: e.message }); setResetStatus('error') }
+              }}
+              disabled={resetStatus === 'syncing'}
+              className="px-4 py-2 rounded-lg text-white font-semibold text-sm disabled:opacity-50"
+              style={{ background: '#dc2626' }}
+            >
+              Yes, reset
+            </button>
+            <button
+              onClick={() => setResetConfirm(false)}
+              className="px-4 py-2 rounded-lg text-gray-700 font-semibold text-sm border border-gray-300 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        {resetResult && (
+          <div className={`mt-3 p-3 rounded-xl text-sm ${resetResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            {resetResult.error
+              ? <p className="text-red-700"><strong>Error:</strong> {resetResult.error}</p>
+              : <p className="text-green-800">✅ All points reset to 0. ({resetResult.updated} predictions cleared)</p>}
           </div>
         )}
       </div>

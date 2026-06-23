@@ -220,16 +220,12 @@ export default function PredictionsClient({
     setJokers(prev => ({ ...prev, [matchId]: newVal }))
     setJokerSaving(matchId)
 
-    const p = preds[matchId] ?? { h: '0', a: '0' }
+    // Only send matchId + joker — no scores, no scorerPred
+    // The route uses a simple SQL path that doesn't touch other columns
     const res = await fetch('/api/predictions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        matchId,
-        homeScore: p.h !== '' ? +p.h : 0,
-        awayScore: p.a !== '' ? +p.a : 0,
-        joker: newVal,
-      }),
+      body: JSON.stringify({ matchId, joker: newVal }),
     })
     setJokerSaving(null)
 

@@ -1,6 +1,7 @@
 /**
  * Live Score Sync API -- /api/sync-scores
  * Fetches FIFA World Cup 2026 results from football-data.org and updates the DB.
+ * Auto-populates Match.scorers from the API goals array — no manual entry needed.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
@@ -12,6 +13,13 @@ const API_KEY = process.env.FOOTBALL_DATA_API_KEY ?? ''
 const BASE_URL = 'https://api.football-data.org/v4'
 const CRON_SECRET = process.env.CRON_SECRET ?? 'local-dev'
 
+interface FDGoal {
+  minute: number
+  type: string   // 'NORMAL' | 'PENALTY' | 'OWN_GOAL'
+  scorer: { id: number; name: string }
+  team: { id: number; name: string }
+}
+
 interface FDMatch {
   id: number
   utcDate: string
@@ -19,6 +27,7 @@ interface FDMatch {
   homeTeam: { name: string; shortName: string; tla: string }
   awayTeam: { name: string; shortName: string; tla: string }
   score: { fullTime: { home: number | null; away: number | null }; winner: string | null }
+  goals?: FDGoal[]
 }
 
 async function syncMatchResults() {
@@ -56,24 +65,67 @@ async function syncMatchResults() {
     const isFinished = lm.status === 'FINISHED'
     const isLive = ['IN_PLAY', 'PAUSED'].includes(lm.status)
 
-    if (match.status === 'finished' && match.homeScore === home && match.awayScore === away) continue
+    // Extract scorer names from goals (exclude own goals — they count for the other team)
+    const apiScorers: string[] = (lm.goals ?? [])
+      .filter(g => g.type !== 'OWN_GOAL')
+      .map(g => g.scorer?.name)
+      .filter(Boolean)
 
-    await prisma.match.update({
-      where: { id: match.id },
-      data: {
-        homeScore: home,
-        awayScore: away,
-        status: isFinished ? 'finished' : isLive ? 'live' : match.status,
-        locked: isFinished || isLive,
-      },
-    })
+    // Skip only when scores are unchanged AND the API has no scorer data to add
+    // If apiScorers is non-empty, always process — needed to backfill Match.scorers
+    if (match.status === 'finished' && match.homeScore === home && match.awayScore === away && apiScorers.length === 0) continue
+
+    // Update match scores + auto-populate scorers from API
+    if (apiScorers.length > 0) {
+      // We have scorer data from the API — save it
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Match" SET "homeScore" = $1, "awayScore" = $2, status = $3, locked = $4, scorers = $5::jsonb
+         WHERE id = $6`,
+        home, away,
+        isFinished ? 'finished' : isLive ? 'live' : match.status,
+        isFinished || isLive,
+        JSON.stringify(apiScorers),
+        match.id
+      )
+    } else {
+      // No scorer data yet (match in progress or API didn't return goals) — don't wipe existing scorers
+      await prisma.match.update({
+        where: { id: match.id },
+        data: {
+          homeScore: home,
+          awayScore: away,
+          status: isFinished ? 'finished' : isLive ? 'live' : match.status,
+          locked: isFinished || isLive,
+        },
+      })
+    }
     updated++
 
     if (isFinished) {
-      const predictions = await prisma.prediction.findMany({ where: { matchId: match.id } })
+      // Use raw SQL so scorerPred is included regardless of Prisma client version
+      const predictions: any[] = await prisma.$queryRawUnsafe(
+        `SELECT id, "homeScore", "awayScore", joker, "scorerPred" FROM "Prediction" WHERE "matchId" = $1`,
+        match.id
+      )
+      // Use API scorers if available; fall back to whatever is stored in DB
+      const scorerSet = new Set<string>(
+        apiScorers.length > 0
+          ? apiScorers.map(s => s.toLowerCase().trim())
+          : (await prisma.$queryRawUnsafe<any[]>(`SELECT scorers FROM "Match" WHERE id = $1`, match.id))[0]?.scorers?.map((s: string) => s.toLowerCase().trim()) ?? []
+      )
       for (const pred of predictions) {
-        const points = calcPoints(pred.homeScore, pred.awayScore, home, away, pred.joker)
-        await prisma.prediction.update({ where: { id: pred.id }, data: { points } })
+        const scorerPred: string = pred.scorerPred ?? ''
+        const scorerCorrect = !!scorerPred && scorerSet.has(scorerPred.toLowerCase().trim())
+        const points = calcPoints(
+          Number(pred.homeScore), Number(pred.awayScore),
+          home, away,
+          Boolean(pred.joker),
+          scorerCorrect,
+        )
+        await prisma.$executeRawUnsafe(
+          `UPDATE "Prediction" SET points = $1 WHERE id = $2`,
+          points, Number(pred.id)
+        )
         scored++
       }
     }

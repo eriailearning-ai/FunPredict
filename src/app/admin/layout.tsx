@@ -15,6 +15,7 @@ const NAV = [
   ]},
   { group: 'Tournament', items: [
     { href: '/admin/matches', label: 'Matches', icon: '📅' },
+    { href: '/admin/results', label: 'Results & Scorers', icon: '⚽' },
     { href: '/admin/teams', label: 'Teams', icon: '🚩' },
     { href: '/admin/sync', label: 'Score Sync', icon: '🔄' },
   ]},

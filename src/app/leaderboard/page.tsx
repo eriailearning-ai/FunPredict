@@ -6,6 +6,7 @@ import { getSidebarData } from '@/lib/sidebar'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import Link from 'next/link'
+import LeaderboardClient from './LeaderboardClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -132,48 +133,11 @@ export default async function LeaderboardPage() {
                       <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">⭐ SuperPlayer view</span>
                     )}
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead style={{ background: '#1e3a5f' }}>
-                        <tr>
-                          <th className="px-4 py-3 text-left text-white text-xs font-bold">#</th>
-                          <th className="px-4 py-3 text-left text-white text-xs font-bold">Player</th>
-                          {seeAll && <th className="px-4 py-3 text-left text-white text-xs font-bold hidden sm:table-cell">League</th>}
-                          <th className="px-4 py-3 text-center text-white text-xs font-bold">Matches</th>
-                          <th className="px-4 py-3 text-center text-white text-xs font-bold">Exact</th>
-                          <th className="px-4 py-3 text-center text-white text-xs font-bold">Pts</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {board.map((p, i) => (
-                          <tr key={p.id}
-                            className={`border-t border-gray-50 transition-colors ${
-                              p.id === currentUserId
-                                ? 'bg-blue-50 font-semibold'
-                                : i === 0 ? 'bg-yellow-50'
-                                : i % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                            }`}>
-                            <td className="px-4 py-3 text-gray-400 text-xs">
-                              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="text-xs font-semibold text-gray-800">
-                                {p.display}
-                                {p.id === currentUserId && <span className="ml-1 text-blue-600">(you)</span>}
-                              </div>
-                              {p.cheeringFrom && <div className="text-xs text-gray-400">{p.cheeringFrom}</div>}
-                            </td>
-                            {seeAll && (
-                              <td className="px-4 py-3 text-xs text-gray-500 hidden sm:table-cell">{p.league}</td>
-                            )}
-                            <td className="px-4 py-3 text-center text-xs text-gray-500">{p.played}</td>
-                            <td className="px-4 py-3 text-center text-xs text-green-600 font-medium">{p.exact}</td>
-                            <td className="px-4 py-3 text-center text-sm font-black" style={{ color: '#1e3a5f' }}>{p.total}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <LeaderboardClient
+                    board={board}
+                    currentUserId={currentUserId ?? null}
+                    seeAll={seeAll}
+                  />
                 </div>
 
                 {/* Admin/SuperPlayer: per-league breakdown tables */}

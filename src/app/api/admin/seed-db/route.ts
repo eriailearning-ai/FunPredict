@@ -36,6 +36,16 @@ const TEAMS: [string, string, string, string][] = [
   ['ENG','England','gb-eng','L'],  ['CRO','Croatia','hr','L'],
 ]
 
+// Known goalscorers per match (comma-separated names must match player squad names)
+const SCORERS: Record<string, string[]> = {
+  'ARG-AUT': ['Lionel Messi'],
+  'FRA-IRQ': ['Kylian Mbappe'],
+  'FRA-SEN': ['Kylian Mbappe'],
+  'TUN-JPN': ['Wataru Endo'],
+  'ESP-KSA': ['Lamine Yamal'],
+  'NZL-EGY': ['Elijah Just'],
+}
+
 const SCORES: Record<string, {h:number;a:number}> = {
   // Matchday 1
   'MEX-ZAF':{h:2,a:0}, 'KOR-CZE':{h:2,a:1},
@@ -55,6 +65,10 @@ const SCORES: Record<string, {h:number;a:number}> = {
   'SUI-BIH':{h:4,a:1}, 'CAN-QAT':{h:6,a:0},
   'SCO-MAR':{h:0,a:1}, 'BRA-HTI':{h:3,a:0},
   'USA-AUS':{h:2,a:0}, 'TUR-PRY':{h:0,a:1},
+  'TUN-JPN':{h:0,a:4}, 'ESP-KSA':{h:4,a:0},
+  'BEL-IRN':{h:0,a:0}, 'NZL-EGY':{h:1,a:3},
+  'ARG-AUT':{h:2,a:0}, 'FRA-IRQ':{h:3,a:0},
+  'URY-CPV':{h:1,a:0},
 }
 
 // [homeCode, awayCode, utcDate, venue, group]
@@ -193,24 +207,29 @@ export async function POST() {
       const awayTeamId = teamMap[awayCode]
       if (!homeTeamId || !awayTeamId) return
 
-      const key    = `${homeCode}-${awayCode}`
-      const scores = SCORES[key]
-      const status = scores ? 'finished' : matchStatus(utcDate)
-      const locked = scores ? true : new Date() >= new Date(new Date(utcDate).getTime() - 15 * 60 * 1000)
+      const key     = `${homeCode}-${awayCode}`
+      const scores  = SCORES[key]
+      const scorers = SCORERS[key]
+      const status  = scores ? 'finished' : matchStatus(utcDate)
+      const locked  = scores ? true : new Date() >= new Date(new Date(utcDate).getTime() - 15 * 60 * 1000)
 
-      const data = {
+      const baseData: any = {
         homeTeamId, awayTeamId, group, stage: 'group',
         matchDate: new Date(utcDate), venue, status, locked,
-        homeScore: scores?.h ?? null,
-        awayScore: scores?.a ?? null,
       }
+      if (scores)  { baseData.homeScore = scores.h; baseData.awayScore = scores.a }
+      if (scorers) { baseData.scorers = scorers }
 
       const existingId = existingMap.get(`${homeTeamId}-${awayTeamId}`)
       if (existingId) {
-        await prisma.match.update({ where: { id: existingId }, data })
+        // Never wipe admin-entered scores or scorers when re-seeding
+        const updateData: any = { ...baseData }
+        if (!scores)  { delete updateData.homeScore; delete updateData.awayScore }
+        if (!scorers) { delete updateData.scorers }
+        await prisma.match.update({ where: { id: existingId }, data: updateData })
         updated++
       } else {
-        await prisma.match.create({ data })
+        await prisma.match.create({ data: { ...baseData, homeScore: scores?.h ?? null, awayScore: scores?.a ?? null } })
         created++
       }
     })

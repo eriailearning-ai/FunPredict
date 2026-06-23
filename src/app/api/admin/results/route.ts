@@ -9,27 +9,41 @@ export async function POST(req: NextRequest) {
   await requireAdmin()
   const { matchId, homeScore, awayScore, scorers } = await req.json()
 
-  // Normalise to a clean array and a lookup Set
+  // Normalise scorer list
   const scorerList: string[] = (scorers ?? []).map((s: string) => s.trim()).filter(Boolean)
   const scorerSet = new Set(scorerList.map(s => s.toLowerCase()))
 
-  await prisma.match.update({
-    where: { id: matchId },
-    data: { homeScore, awayScore, status: 'finished', locked: true, scorers: scorerList },
-  })
+  // Save match result (use raw SQL for scorers — Prisma client may predate schema change)
+  await prisma.$executeRawUnsafe(
+    `UPDATE "Match"
+     SET "homeScore" = $1, "awayScore" = $2, status = 'finished', locked = true, scorers = $3
+     WHERE id = $4`,
+    homeScore, awayScore, scorerList, matchId
+  )
 
-  const predictions = await prisma.prediction.findMany({ where: { matchId } })
+  // Fetch predictions with scorerPred via raw SQL (bypasses stale Prisma client)
+  const predictions: any[] = await prisma.$queryRawUnsafe(
+    `SELECT id, "homeScore", "awayScore", joker, points, "scorerPred"
+     FROM "Prediction"
+     WHERE "matchId" = $1`,
+    matchId
+  )
+
   for (const pred of predictions) {
-    const scorerCorrect =
-      !!((pred as any).scorerPred) &&
-      scorerSet.has(((pred as any).scorerPred as string).toLowerCase().trim())
+    const scorerPred: string = pred.scorerPred ?? ''
+    const scorerCorrect = !!scorerPred && scorerSet.has(scorerPred.toLowerCase().trim())
+
     const points = calcPoints(
-      pred.homeScore, pred.awayScore,
+      Number(pred.homeScore), Number(pred.awayScore),
       homeScore, awayScore,
-      pred.joker,
+      Boolean(pred.joker),
       scorerCorrect,
     )
-    await prisma.prediction.update({ where: { id: pred.id }, data: { points } })
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE "Prediction" SET points = $1 WHERE id = $2`,
+      points, Number(pred.id)
+    )
   }
 
   return NextResponse.json({ ok: true, scored: predictions.length })

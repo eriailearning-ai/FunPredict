@@ -128,8 +128,13 @@ export default async function PredictionsPage() {
       }
     })
 
-    const myPreds = await prisma.prediction.findMany({ where: { userId: user!.id } }).catch(() => [])
-    predMap = Object.fromEntries(myPreds.map(p => [p.matchId, p]))
+    // Use raw SQL so scorerPred is included regardless of Prisma client version
+    const myPreds: any[] = await prisma.$queryRawUnsafe(
+      `SELECT id, "matchId", "homeScore", "awayScore", joker, "scorerPred", points
+       FROM "Prediction" WHERE "userId" = $1`,
+      user!.id
+    ).catch(() => [])
+    predMap = Object.fromEntries(myPreds.map((p: any) => [Number(p.matchId), p]))
     userTotalPoints = myPreds.reduce((s, p) => s + (p.points ?? 0), 0)
 
     const myDisplay = (user as any)?.nickname || (user as any)?.username || user?.name

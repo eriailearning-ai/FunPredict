@@ -20,6 +20,7 @@ const PUBLIC_PATHS = [
   '/api/admin/quick-action',          // one-click approve/deny from email (token-secured)
   '/api/debug', '/api/sync-scores', '/api/polls', '/api/scores', '/api/bonus',
   '/api/tournament',                               // public schedule/teams/matches data
+  '/api/players',                                  // auth checked inside route via getSession()
   // Dev helpers
   '/test',
   // Images, flags etc are handled by static matcher below

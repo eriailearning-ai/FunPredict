@@ -21,6 +21,8 @@ export async function POST(req: NextRequest) {
   const { matchId, joker } = body
   const homeScore: number | undefined = body.homeScore
   const awayScore: number | undefined = body.awayScore
+  // undefined = not sent (joker-only toggle); null = explicitly cleared
+  const hasScorerField = 'scorerPred' in body
   const scorerPred: string | null = body.scorerPred ?? null
 
   const match = await prisma.match.findUnique({ where: { id: matchId } })
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Predictions are closed for this match' }, { status: 400 })
   }
 
-  // Joker enforcement: one per stage (group stage, knockout, etc.)
+  // Joker enforcement: one per stage
   if (joker === true) {
     const sameStageMatchIds = await prisma.match.findMany({
       where: { stage: match.stage },
@@ -49,22 +51,25 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const updateData: any = {}
-  if (homeScore !== undefined) updateData.homeScore = homeScore
-  if (awayScore !== undefined) updateData.awayScore = awayScore
-  if (joker !== undefined)    updateData.joker     = joker
-  if (scorerPred !== undefined) updateData.scorerPred = scorerPred
+  if (hasScorerField || homeScore !== undefined || awayScore !== undefined) {
+    // Full save — includes scorerPred (requires scorerPred column to exist)
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "Prediction" ("userId", "matchId", "homeScore", "awayScore", joker, "scorerPred")
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT ("userId", "matchId") DO UPDATE SET
+        "homeScore"  = EXCLUDED."homeScore",
+        "awayScore"  = EXCLUDED."awayScore",
+        joker        = EXCLUDED.joker,
+        "scorerPred" = EXCLUDED."scorerPred"
+    `, user.id, matchId, homeScore ?? 0, awayScore ?? 0, joker ?? false, scorerPred)
+  } else {
+    // Joker-only toggle — safe even before DB migration, never touches scorerPred
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "Prediction" ("userId", "matchId", "homeScore", "awayScore", joker)
+      VALUES ($1, $2, 0, 0, $3)
+      ON CONFLICT ("userId", "matchId") DO UPDATE SET joker = EXCLUDED.joker
+    `, user.id, matchId, joker ?? false)
+  }
 
-  const prediction = await prisma.prediction.upsert({
-    where: { userId_matchId: { userId: user.id, matchId } },
-    create: {
-      userId: user.id, matchId,
-      homeScore: homeScore ?? 0,
-      awayScore: awayScore ?? 0,
-      joker: joker ?? false,
-      scorerPred: scorerPred ?? null,
-    },
-    update: updateData,
-  })
-  return NextResponse.json(prediction)
+  return NextResponse.json({ ok: true })
 }

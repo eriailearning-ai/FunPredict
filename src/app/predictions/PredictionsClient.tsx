@@ -922,44 +922,44 @@ function MyPointsTab({ matches, predMap }: { matches: any[]; predMap: Record<num
     )
   }
 
-  // Derive breakdown per match from stored data
+  // Use STORED points so total always matches leaderboard
   const rows = finished.map(m => {
-    const pred   = predMap[m.id]
-    const pts    = pred.points ?? 0
-    const joker  = pred.joker  ?? false
+    const pred       = predMap[m.id]
+    const storedPts  = pred.points ?? 0          // ← source of truth
+    const joker      = pred.joker  ?? false
     const scorerPred: string = pred.scorerPred ?? ''
     const actualScorers: string[] = (m.scorers ?? []) as string[]
 
     const scorerHit = !!scorerPred &&
       actualScorers.some(s => s.toLowerCase().trim() === scorerPred.toLowerCase().trim())
 
-    // Determine score outcome label
-    let scoreLabel = ''
-    let baseScore = 0
-    if (pred.homeScore === m.homeScore && pred.awayScore === m.awayScore) {
-      scoreLabel = 'Exact'; baseScore = 5
-    } else {
-      const predSign = Math.sign(pred.homeScore - pred.awayScore)
-      const realSign = Math.sign(m.homeScore - m.awayScore)
-      if (predSign === realSign) {
-        scoreLabel = 'Outcome'; baseScore = 3
+    // Score label — only computable when real match scores are in the DB
+    const hasRealScore = m.homeScore !== null && m.awayScore !== null
+    let scoreLabel = '—'
+    let baseScore: number | null = null
+
+    if (hasRealScore) {
+      if (pred.homeScore === m.homeScore && pred.awayScore === m.awayScore) {
+        scoreLabel = 'Exact'; baseScore = 5
       } else {
-        let partial = 0
-        if (pred.homeScore === m.homeScore) partial++
-        if (pred.awayScore === m.awayScore) partial++
-        scoreLabel = partial > 0 ? `Partial (${partial})` : 'Wrong'
-        baseScore = partial
+        const predSign = Math.sign(pred.homeScore - pred.awayScore)
+        const realSign = Math.sign(m.homeScore - m.awayScore)
+        if (predSign === realSign) {
+          scoreLabel = 'Outcome'; baseScore = 3
+        } else {
+          let partial = 0
+          if (pred.homeScore === m.homeScore) partial++
+          if (pred.awayScore === m.awayScore) partial++
+          scoreLabel = partial > 0 ? `Partial (${partial})` : 'Wrong'
+          baseScore = partial
+        }
       }
     }
 
-    const scorerBonus = scorerHit ? 2 : 0
-    const raw  = baseScore + scorerBonus
-    const total = joker ? raw * 2 : raw
-
-    return { m, pred, pts, joker, scorerPred, scorerHit, actualScorers, scoreLabel, baseScore, scorerBonus, raw, total }
+    return { m, pred, storedPts, joker, scorerPred, scorerHit, scoreLabel, baseScore, hasRealScore }
   })
 
-  const grandTotal = rows.reduce((s, r) => s + r.total, 0)
+  const grandTotal = rows.reduce((s, r) => s + r.storedPts, 0)
 
   return (
     <div className="space-y-3">
@@ -991,7 +991,7 @@ function MyPointsTab({ matches, predMap }: { matches: any[]; predMap: Record<num
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {rows.map(({ m, pred, joker, scorerPred, scorerHit, actualScorers, scoreLabel, baseScore, scorerBonus, total }) => (
+              {rows.map(({ m, pred, storedPts, joker, scorerPred, scorerHit, scoreLabel, baseScore, hasRealScore }) => (
                 <tr key={m.id} className="hover:bg-gray-50">
                   {/* Match */}
                   <td className="px-3 py-2.5">
@@ -1000,18 +1000,24 @@ function MyPointsTab({ matches, predMap }: { matches: any[]; predMap: Record<num
                   </td>
                   {/* Result */}
                   <td className="px-3 py-2.5 text-center font-bold text-gray-700">
-                    {m.homeScore}–{m.awayScore}
+                    {hasRealScore ? `${m.homeScore}–${m.awayScore}` : <span className="text-gray-400">?–?</span>}
                   </td>
                   {/* My pick */}
                   <td className="px-3 py-2.5 text-center text-gray-600">
                     {pred.homeScore}–{pred.awayScore}
                   </td>
-                  {/* Score pts */}
+                  {/* Score label */}
                   <td className="px-3 py-2.5 text-center">
-                    <span className={`font-bold ${baseScore === 5 ? 'text-green-600' : baseScore === 3 ? 'text-blue-600' : baseScore > 0 ? 'text-orange-500' : 'text-gray-400'}`}>
-                      {baseScore}
-                    </span>
-                    <div className={`text-[10px] ${baseScore >= 3 ? 'text-gray-500' : 'text-gray-400'}`}>{scoreLabel}</div>
+                    {baseScore !== null ? (
+                      <>
+                        <span className={`font-bold ${baseScore === 5 ? 'text-green-600' : baseScore === 3 ? 'text-blue-600' : baseScore > 0 ? 'text-orange-500' : 'text-gray-400'}`}>
+                          {baseScore}
+                        </span>
+                        <div className={`text-[10px] ${baseScore >= 3 ? 'text-gray-500' : 'text-gray-400'}`}>{scoreLabel}</div>
+                      </>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
                   </td>
                   {/* Scorer pts */}
                   <td className="px-3 py-2.5 text-center">
@@ -1032,9 +1038,9 @@ function MyPointsTab({ matches, predMap }: { matches: any[]; predMap: Record<num
                       ? <span className="font-bold text-yellow-600">×2</span>
                       : <span className="text-gray-300">—</span>}
                   </td>
-                  {/* Total */}
+                  {/* Total — always from stored points */}
                   <td className="px-3 py-2.5 text-center">
-                    <span className="text-base font-black" style={{ color: total > 0 ? '#1e3a5f' : '#9ca3af' }}>{total}</span>
+                    <span className="text-base font-black" style={{ color: storedPts > 0 ? '#1e3a5f' : '#9ca3af' }}>{storedPts}</span>
                   </td>
                 </tr>
               ))}
@@ -1050,7 +1056,7 @@ function MyPointsTab({ matches, predMap }: { matches: any[]; predMap: Record<num
       </div>
 
       <p className="text-xs text-gray-400 px-1">
-        Pending matches and ungraded results are not shown. Joker doubles the combined score + scorer bonus.
+        Points are stored values — Score/Scorer labels appear once admin enters match results. Joker doubles score points only (+2 scorer is always flat).
       </p>
     </div>
   )
@@ -1331,7 +1337,8 @@ function ScoringRules() {
           You can change predictions until kick-off.
         </p>
         <p className="text-sm text-gray-600">
-          Each match can award up to <strong>7 points</strong> (14 with joker): 5 for exact score + 2 for naming a scorer.
+          Each match can award up to <strong>7 points</strong> (12 with joker): 5 for exact score + 2 for naming a scorer.
+          The joker doubles your score points only — the +2 scorer bonus is always flat.
         </p>
       </div>
 

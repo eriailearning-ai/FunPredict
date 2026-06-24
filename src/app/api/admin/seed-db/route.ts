@@ -224,7 +224,10 @@ export async function POST() {
       const existingId = existingMap.get(`${homeTeamId}-${awayTeamId}`)
       if (existingId) {
         // Never wipe admin-entered scores or scorers when re-seeding
+        // homeTeamId/awayTeamId never change — remove to avoid stale Prisma client FK error
         const updateData: any = { ...baseData }
+        delete updateData.homeTeamId
+        delete updateData.awayTeamId
         if (!scores)  { delete updateData.homeScore; delete updateData.awayScore }
         if (!scorers) { delete updateData.scorers }
         await prisma.match.update({ where: { id: existingId }, data: updateData })

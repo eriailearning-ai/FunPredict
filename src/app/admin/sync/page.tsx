@@ -319,7 +319,9 @@ export default function AdminSyncPage() {
             setSeedStatus('syncing'); setSeedResult(null)
             try {
               const res = await fetch('/api/admin/seed-db', { method: 'POST' })
-              const data = await res.json()
+              const text = await res.text()
+              if (!text) { setSeedResult({ error: 'Timed out — Neon DB was cold. Wait 10s and try again.' }); setSeedStatus('error'); return }
+              const data = JSON.parse(text)
               setSeedResult(data)
               setSeedStatus(data.ok ? 'done' : 'error')
             } catch (e: any) { setSeedResult({ error: e.message }); setSeedStatus('error') }

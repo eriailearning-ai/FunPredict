@@ -157,6 +157,7 @@ function matchStatus(utcDate: string) {
 }
 
 export async function POST() {
+  try {
   await requireAdmin()
 
   const validCodes = new Set(TEAMS.map(([code]) => code))
@@ -242,4 +243,8 @@ export async function POST() {
   }
 
   return NextResponse.json({ ok: true, created, updated, ...counts })
+  } catch (err: any) {
+    console.error('[seed-db]', err)
+    return NextResponse.json({ ok: false, error: err?.message ?? 'Seed failed' }, { status: 500 })
+  }
 }

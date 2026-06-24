@@ -9,7 +9,13 @@ export default function SeedDbButton({ hasMatches }: { hasMatches: boolean }) {
     setState('loading')
     try {
       const res  = await fetch('/api/admin/seed-db', { method: 'POST' })
-      const data = await res.json()
+      const text = await res.text()
+      if (!text) {
+        setResult('Timed out — Neon DB was cold. Wait 10s and try again.')
+        setState('error')
+        return
+      }
+      const data = JSON.parse(text)
       if (data.ok) {
         setResult(`✅ Done — ${data.created} created, ${data.updated} updated · ${data.teams} teams · ${data.finished} finished · ${data.upcoming} upcoming`)
         setState('done')

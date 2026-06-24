@@ -223,17 +223,43 @@ export async function POST() {
 
       const existingId = existingMap.get(`${homeTeamId}-${awayTeamId}`)
       if (existingId) {
+        // Raw SQL update — avoids stale Prisma client rejecting scorers / FK fields
         // Never wipe admin-entered scores or scorers when re-seeding
-        // homeTeamId/awayTeamId never change — remove to avoid stale Prisma client FK error
-        const updateData: any = { ...baseData }
-        delete updateData.homeTeamId
-        delete updateData.awayTeamId
-        if (!scores)  { delete updateData.homeScore; delete updateData.awayScore }
-        if (!scorers) { delete updateData.scorers }
-        await prisma.match.update({ where: { id: existingId }, data: updateData })
+        if (scores && scorers) {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "Match" SET "group"=$1, stage=$2, "matchDate"=$3, venue=$4, status=$5, locked=$6,
+             "homeScore"=$7, "awayScore"=$8, scorers=$9::jsonb WHERE id=$10`,
+            group, 'group', new Date(utcDate), venue, status, locked,
+            scores.h, scores.a, JSON.stringify(scorers), existingId
+          )
+        } else if (scores) {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "Match" SET "group"=$1, stage=$2, "matchDate"=$3, venue=$4, status=$5, locked=$6,
+             "homeScore"=$7, "awayScore"=$8 WHERE id=$9`,
+            group, 'group', new Date(utcDate), venue, status, locked,
+            scores.h, scores.a, existingId
+          )
+        } else if (scorers) {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "Match" SET "group"=$1, stage=$2, "matchDate"=$3, venue=$4, status=$5, locked=$6,
+             scorers=$7::jsonb WHERE id=$8`,
+            group, 'group', new Date(utcDate), venue, status, locked,
+            JSON.stringify(scorers), existingId
+          )
+        } else {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "Match" SET "group"=$1, stage=$2, "matchDate"=$3, venue=$4, status=$5, locked=$6 WHERE id=$7`,
+            group, 'group', new Date(utcDate), venue, status, locked, existingId
+          )
+        }
         updated++
       } else {
-        await prisma.match.create({ data: { ...baseData, homeScore: scores?.h ?? null, awayScore: scores?.a ?? null } })
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO "Match" ("homeTeamId","awayTeamId","group",stage,"matchDate",venue,status,locked,"homeScore","awayScore",scorers)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb)`,
+          homeTeamId, awayTeamId, group, 'group', new Date(utcDate), venue, status, locked,
+          scores?.h ?? null, scores?.a ?? null, JSON.stringify(scorers ?? [])
+        )
         created++
       }
     })

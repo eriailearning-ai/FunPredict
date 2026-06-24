@@ -51,20 +51,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const hasJokerField = 'joker' in body
+
     if (hasScorerField || homeScore !== undefined || awayScore !== undefined) {
-      // Full save — includes scorerPred
-      await prisma.$executeRawUnsafe(`
-        INSERT INTO "Prediction" ("userId", "matchId", "homeScore", "awayScore", joker, "scorerPred", "createdAt", "updatedAt")
-        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-        ON CONFLICT ("userId", "matchId") DO UPDATE SET
-          "homeScore"  = EXCLUDED."homeScore",
-          "awayScore"  = EXCLUDED."awayScore",
-          joker        = EXCLUDED.joker,
-          "scorerPred" = EXCLUDED."scorerPred",
-          "updatedAt"  = NOW()
-      `, user.id, matchId, homeScore ?? 0, awayScore ?? 0, joker ?? false, scorerPred)
+      // Full save (score + scorer). Only update joker if explicitly sent —
+      // savePred never sends joker, so we must not overwrite an existing joker=true.
+      if (hasJokerField) {
+        await prisma.$executeRawUnsafe(`
+          INSERT INTO "Prediction" ("userId", "matchId", "homeScore", "awayScore", joker, "scorerPred", "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          ON CONFLICT ("userId", "matchId") DO UPDATE SET
+            "homeScore"  = EXCLUDED."homeScore",
+            "awayScore"  = EXCLUDED."awayScore",
+            joker        = EXCLUDED.joker,
+            "scorerPred" = EXCLUDED."scorerPred",
+            "updatedAt"  = NOW()
+        `, user.id, matchId, homeScore ?? 0, awayScore ?? 0, joker ?? false, scorerPred)
+      } else {
+        // joker not sent — preserve whatever is already in DB
+        await prisma.$executeRawUnsafe(`
+          INSERT INTO "Prediction" ("userId", "matchId", "homeScore", "awayScore", joker, "scorerPred", "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4, false, $5, NOW(), NOW())
+          ON CONFLICT ("userId", "matchId") DO UPDATE SET
+            "homeScore"  = EXCLUDED."homeScore",
+            "awayScore"  = EXCLUDED."awayScore",
+            "scorerPred" = EXCLUDED."scorerPred",
+            "updatedAt"  = NOW()
+        `, user.id, matchId, homeScore ?? 0, awayScore ?? 0, scorerPred)
+      }
     } else {
-      // Joker-only toggle — never touches scorerPred
+      // Joker-only toggle — never touches scores or scorerPred
       await prisma.$executeRawUnsafe(`
         INSERT INTO "Prediction" ("userId", "matchId", "homeScore", "awayScore", joker, "createdAt", "updatedAt")
         VALUES ($1, $2, 0, 0, $3, NOW(), NOW())

@@ -12,7 +12,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
-import { calcPoints } from '@/lib/scoring'
+import { calcPoints, scorerMatches } from '@/lib/scoring'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +58,7 @@ export async function POST() {
         (match.scorers ?? []).map((s: string) => s.toLowerCase().trim()).filter(Boolean)
       )
       const scorerPred: string = pred.scorerPred ?? ''
-      const scorerCorrect = !!scorerPred && scorerSet.has(scorerPred.toLowerCase().trim())
+      const scorerCorrect = scorerMatches(scorerPred, [...scorerSet])
 
       // Raw SQL returns BigInt for numeric columns — coerce to Number
       const points = calcPoints(

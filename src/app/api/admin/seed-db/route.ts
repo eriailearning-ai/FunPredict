@@ -50,6 +50,9 @@ const SCORERS: Record<string, string[]> = {
   'TUN-JPN': ['Wataru Endo'],
   'ESP-KSA': ['Lamine Yamal'],
   'NZL-EGY': ['Elijah Just'],
+  // Matchday 3
+  'NOR-SEN': ['Erling Haaland'],
+  'POR-UZB': ['Cristiano Ronaldo'],
 }
 
 const SCORES: Record<string, {h:number;a:number}> = {
@@ -75,6 +78,10 @@ const SCORES: Record<string, {h:number;a:number}> = {
   'BEL-IRN':{h:0,a:0}, 'NZL-EGY':{h:1,a:3},
   'ARG-AUT':{h:2,a:0}, 'FRA-IRQ':{h:3,a:0},
   'URY-CPV':{h:1,a:0},
+  // Matchday 3
+  'ECU-CUW':{h:0,a:0}, 'NOR-SEN':{h:3,a:2},
+  'JOR-ALG':{h:1,a:2}, 'POR-UZB':{h:5,a:0},
+  'ENG-GHA':{h:0,a:0}, 'PAN-CRO':{h:0,a:1},
 }
 
 // [homeCode, awayCode, utcDate, venue, group]

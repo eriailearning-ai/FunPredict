@@ -3,6 +3,7 @@
  * Single query — minimises Neon round-trips to avoid Vercel 10 s timeout.
  */
 import { NextRequest, NextResponse } from 'next/server'
+import { scorerMatches } from '@/lib/scoring'
 import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
@@ -60,8 +61,7 @@ export async function GET(req: NextRequest) {
       const realA = hasRealScore ? Number(r.real_a) : null
 
       const scorerPred: string = r.scorer_pred ?? ''
-      const scorerSet = new Set<string>((r.scorers ?? []).map((s: string) => s.toLowerCase().trim()))
-      const scorerCorrect = !!scorerPred && scorerSet.has(scorerPred.toLowerCase().trim())
+      const scorerCorrect = scorerMatches(scorerPred, r.scorers ?? [])
 
       let scoreType: string
       if (!hasRealScore) {

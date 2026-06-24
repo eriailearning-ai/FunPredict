@@ -5,7 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { calcPoints } from '@/lib/scoring'
+import { calcPoints, scorerMatches } from '@/lib/scoring'
 import { requireAdmin } from '@/lib/auth'
 
 const WC2026_ID = 2000
@@ -50,6 +50,9 @@ async function syncMatchResults() {
   let updated = 0
   let scored = 0
 
+  // Map football-data.org match id → DB match id, for scorer backfill below
+  const fdToDbId = new Map<number, number>()
+
   for (const lm of liveMatches) {
     const { home, away } = lm.score.fullTime
     if (home === null || away === null) continue
@@ -61,6 +64,7 @@ async function syncMatchResults() {
       },
     })
     if (!match) continue
+    if (lm.status === 'FINISHED') fdToDbId.set(lm.id, match.id)
 
     const isFinished = lm.status === 'FINISHED'
     const isLive = ['IN_PLAY', 'PAUSED'].includes(lm.status)
@@ -115,7 +119,7 @@ async function syncMatchResults() {
       )
       for (const pred of predictions) {
         const scorerPred: string = pred.scorerPred ?? ''
-        const scorerCorrect = !!scorerPred && scorerSet.has(scorerPred.toLowerCase().trim())
+        const scorerCorrect = scorerMatches(scorerPred, [...scorerSet])
         const points = calcPoints(
           Number(pred.homeScore), Number(pred.awayScore),
           home, away,
@@ -129,6 +133,67 @@ async function syncMatchResults() {
         scored++
       }
     }
+  }
+
+  // Backfill scorers for finished matches that still have an empty scorers array.
+  // The competitions endpoint doesn't return goals — fetch individual match endpoints instead.
+  // Limit to 5 per sync to stay within free-tier rate limits (10 req/min).
+  try {
+    const emptyScorers: any[] = await prisma.$queryRawUnsafe(`
+      SELECT id FROM "Match"
+      WHERE status = 'finished'
+        AND (scorers IS NULL OR scorers = '{}')
+        AND id = ANY($1::int[])
+    `, [...fdToDbId.values()])
+
+    const toBackfill = emptyScorers.slice(0, 5)
+    const dbToFd = new Map([...fdToDbId.entries()].map(([fd, db]) => [db, fd]))
+
+    for (const row of toBackfill) {
+      const dbId = Number(row.id)
+      const fdId = dbToFd.get(dbId)
+      if (!fdId) continue
+
+      const mRes = await fetch(`${BASE_URL}/matches/${fdId}`, {
+        headers: { 'X-Auth-Token': API_KEY },
+        next: { revalidate: 0 },
+      })
+      if (!mRes.ok) continue
+
+      const mData = await mRes.json()
+      const goals: FDGoal[] = mData.match?.goals ?? mData.goals ?? []
+      const names: string[] = goals
+        .filter(g => g.type !== 'OWN_GOAL')
+        .map(g => g.scorer?.name)
+        .filter(Boolean)
+
+      if (names.length === 0) continue
+
+      const pgArr = '{' + names.map(n => `"${n.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',') + '}'
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Match" SET scorers = $1::text[] WHERE id = $2`,
+        pgArr, dbId
+      )
+
+      // Recalculate points for predictions on this match
+      const preds: any[] = await prisma.$queryRawUnsafe(
+        `SELECT id, "homeScore", "awayScore", joker, "scorerPred" FROM "Prediction" WHERE "matchId" = $1`, dbId
+      )
+      const matchRow: any[] = await prisma.$queryRawUnsafe(
+        `SELECT "homeScore", "awayScore" FROM "Match" WHERE id = $1`, dbId
+      )
+      if (!matchRow[0]) continue
+      const { homeScore: mH, awayScore: mA } = matchRow[0]
+      for (const pred of preds) {
+        const sc = scorerMatches(pred.scorerPred ?? '', names)
+        const pts = calcPoints(Number(pred.homeScore), Number(pred.awayScore), Number(mH), Number(mA), Boolean(pred.joker), sc)
+        await prisma.$executeRawUnsafe(`UPDATE "Prediction" SET points = $1 WHERE id = $2`, pts, Number(pred.id))
+        scored++
+      }
+      updated++
+    }
+  } catch (backfillErr) {
+    console.error('[sync-scores backfill]', backfillErr)
   }
 
   try {

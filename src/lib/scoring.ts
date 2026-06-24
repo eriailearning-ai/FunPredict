@@ -9,6 +9,20 @@
  *  Max per match without joker: 7 pts  (exact 5 + scorer 2)
  *  Max per match with joker:   12 pts  (exact 5×2 + scorer 2)
  */
+/**
+ * Check if a scorer prediction matches any name in the scorers list.
+ * Uses substring matching so "Ronaldo" matches "Cristiano Ronaldo",
+ * and "Haaland" matches "Erling Haaland".
+ */
+export function scorerMatches(pred: string, scorers: string[]): boolean {
+  if (!pred || !scorers.length) return false
+  const p = pred.toLowerCase().trim()
+  return scorers.some(s => {
+    const n = s.toLowerCase().trim()
+    return n === p || n.includes(p) || p.includes(n)
+  })
+}
+
 export function calcPoints(
   predHome: number, predAway: number,
   realHome: number, realAway: number,

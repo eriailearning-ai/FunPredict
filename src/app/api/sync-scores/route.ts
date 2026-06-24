@@ -79,12 +79,12 @@ async function syncMatchResults() {
     if (apiScorers.length > 0) {
       // We have scorer data from the API — save it
       await prisma.$executeRawUnsafe(
-        `UPDATE "Match" SET "homeScore" = $1, "awayScore" = $2, status = $3, locked = $4, scorers = $5::jsonb::text[]
+        `UPDATE "Match" SET "homeScore" = $1, "awayScore" = $2, status = $3, locked = $4, scorers = $5::text[]
          WHERE id = $6`,
         home, away,
         isFinished ? 'finished' : isLive ? 'live' : match.status,
         isFinished || isLive,
-        JSON.stringify(apiScorers),
+        '{' + apiScorers.map(s => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',') + '}',
         match.id
       )
     } else {

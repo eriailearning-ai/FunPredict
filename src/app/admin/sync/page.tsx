@@ -19,6 +19,8 @@ export default function AdminSyncPage() {
   const [resetStatus, setResetStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
   const [resetResult, setResetResult] = useState<any>(null)
   const [resetConfirm, setResetConfirm] = useState(false)
+  const [fakeUsersStatus, setFakeUsersStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
+  const [fakeUsersResult, setFakeUsersResult] = useState<any>(null)
 
   async function sync() {
     setStatus('syncing')
@@ -304,6 +306,44 @@ export default function AdminSyncPage() {
             {resetResult.error
               ? <p className="text-red-700"><strong>Error:</strong> {resetResult.error}</p>
               : <p className="text-green-800">✅ All points reset to 0. ({resetResult.updated} predictions cleared)</p>}
+          </div>
+        )}
+      </div>
+
+      {/* ── Seed Fake Users ── */}
+      <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-pink-400">
+        <h2 className="text-sm font-bold text-gray-800 mb-1">🎭 Seed Fake Users (Aila Attackers)</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Creates 50 sample players with funny nicknames in the <strong>Aila Attackers</strong> league,
+          each with realistic predictions and scorer picks for all matches. Safe to run multiple times — skips existing users.
+        </p>
+        <button
+          onClick={async () => {
+            setFakeUsersStatus('syncing'); setFakeUsersResult(null)
+            try {
+              const res = await fetch('/api/admin/seed-fake-users', { method: 'POST' })
+              const text = await res.text()
+              if (!text) { setFakeUsersResult({ error: 'Timed out — DB was cold. Wait 10s and try again.' }); setFakeUsersStatus('error'); return }
+              const data = JSON.parse(text)
+              setFakeUsersResult(data)
+              setFakeUsersStatus(data.ok ? 'done' : 'error')
+            } catch (e: any) { setFakeUsersResult({ error: e.message }); setFakeUsersStatus('error') }
+          }}
+          disabled={fakeUsersStatus === 'syncing'}
+          className="px-6 py-2.5 rounded-lg text-white font-semibold text-sm disabled:opacity-50 transition-colors"
+          style={{ background: fakeUsersStatus === 'done' ? '#166534' : '#be185d' }}
+        >
+          {fakeUsersStatus === 'syncing' ? 'Creating users…' : fakeUsersStatus === 'done' ? '✅ Users seeded' : '🎭 Seed 50 Fake Users'}
+        </button>
+        {fakeUsersResult && (
+          <div className={`mt-3 p-3 rounded-xl text-sm ${fakeUsersResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            {fakeUsersResult.error
+              ? <p className="text-red-700"><strong>Error:</strong> {fakeUsersResult.error}</p>
+              : <p className="text-green-800">
+                  ✅ Created: <strong>{fakeUsersResult.created}</strong> &nbsp;·&nbsp;
+                  Skipped: {fakeUsersResult.skipped} &nbsp;·&nbsp;
+                  League: <strong>{fakeUsersResult.league}</strong>
+                </p>}
           </div>
         )}
       </div>

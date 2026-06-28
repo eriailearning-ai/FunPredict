@@ -265,14 +265,26 @@ export default function PredictionsClient({
     return { exact, outcome, partial, wrong, total: finished.length }
   }, [liveMatchPts])
 
-  /* Date grouping */
-  const byDate: Record<string, Match[]> = {}
-  for (const m of matches) {
-    const key = fmtDate(m.matchDate)
-    if (!byDate[key]) byDate[key] = []
-    byDate[key].push(m)
+  /* Stage ordering + labels */
+  const STAGE_ORDER = ['group','r32','r16','qf','sf','3rd','final']
+  const STAGE_LABEL: Record<string, string> = {
+    group: 'Group Stage', r32: 'Round of 32', r16: 'Round of 16',
+    qf: 'Quarter-Finals', sf: 'Semi-Finals', '3rd': 'Third-Place Play-off', final: 'Final',
   }
-  const dateKeys = Object.keys(byDate)
+
+  /* Group matches by stage, then by date within each stage */
+  const byStage: Record<string, Record<string, Match[]>> = {}
+  for (const m of matches) {
+    const stage = m.stage || 'group'
+    if (!byStage[stage]) byStage[stage] = {}
+    const key = fmtDate(m.matchDate)
+    if (!byStage[stage][key]) byStage[stage][key] = []
+    byStage[stage][key].push(m)
+  }
+  const stagesPresent = STAGE_ORDER.filter(s => byStage[s])
+
+  /* For expand-all/collapse-all — all date keys across all stages */
+  const allDateKeys = stagesPresent.flatMap(s => Object.keys(byStage[s]))
   const todayKey = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })
 
   return (
@@ -360,15 +372,19 @@ export default function PredictionsClient({
                   <div className="flex items-center justify-between">
                     <h2 className="text-base font-bold text-gray-800">Matches</h2>
                     <div className="flex gap-2">
-                      <button onClick={() => setExpandedDates(Object.fromEntries(dateKeys.map(k => [k, true])))}
+                      <button onClick={() => setExpandedDates(Object.fromEntries(allDateKeys.map(k => [k, true])))}
                         className="px-2 py-1 border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50">Expand all</button>
                       <button onClick={() => setExpandedDates({})}
                         className="px-2 py-1 border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50">Collapse all</button>
                     </div>
                   </div>
-                  <div className="px-4 py-2 text-white text-xs font-bold tracking-widest uppercase rounded-lg" style={{ background: '#1e3a5f' }}>Group Stage</div>
-                  {dateKeys.map(key => {
-                    const dayMatches = byDate[key]
+                  {stagesPresent.map(stage => {
+                    const stageDateKeys = Object.keys(byStage[stage])
+                    return (
+                      <div key={stage}>
+                        <div className="px-4 py-2 text-white text-xs font-bold tracking-widest uppercase rounded-lg" style={{ background: '#1e3a5f' }}>{STAGE_LABEL[stage] ?? stage}</div>
+                        {stageDateKeys.map(key => {
+                    const dayMatches = byStage[stage][key]
                     const expanded = !!expandedDates[key]
                     return (
                       <div key={key}>
@@ -585,6 +601,9 @@ export default function PredictionsClient({
                             })}
                           </div>
                         )}
+                      </div>
+                    )
+                  })}
                       </div>
                     )
                   })}

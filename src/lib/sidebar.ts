@@ -101,24 +101,12 @@ export async function getSidebarData(opts?: {
     .sort((a, b) => b.total - a.total)
 
   const LEAGUES = ['Aila Attackers', 'Sukuti Strikers', 'Gorkhali Gooners']
-  const isPlayer = !isAdmin && userLeague !== ''
-  const isGuest  = !isAdmin && !isPlayer
 
-  let topPerformers: SidebarPerformer[]
-
-  if (isPlayer) {
-    // Player: own league only, medals by rank position
-    topPerformers = fullBoard.filter(p => p.league === userLeague)
-  } else if (isGuest) {
-    // Guest: #1 from each league, all get 🥇
-    topPerformers = LEAGUES
-      .map(league => fullBoard.find(p => p.league === league))
-      .filter((p): p is SidebarPerformer => !!p)
-      .map(p => ({ ...p, medal: '🥇' }))
-  } else {
-    // Admin: top performers across all leagues
-    topPerformers = fullBoard
-  }
+  // Always show #1 from each league
+  const topPerformers = LEAGUES
+    .map(league => fullBoard.find(p => p.league === league))
+    .filter((p): p is SidebarPerformer => !!p)
+    .map(p => ({ ...p, medal: '🥇' }))
 
   const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   const toSidebarMatch = (m: any): SidebarMatch => {

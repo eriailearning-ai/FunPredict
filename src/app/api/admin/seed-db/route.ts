@@ -161,52 +161,52 @@ const MATCHES: [string,string,string,string,string][] = [
   ['COD','UZB','2026-06-27T23:30:00Z','Mercedes-Benz Stadium, Atlanta','K'],
 ]
 
-// Knockout round stubs — teams are TBD until group stage results are final
-// Format: [matchLabel, utcDate, venue, stage]
-const KNOCKOUT_MATCHES: [string, string, string, string][] = [
-  // Round of 32 — June 28 – July 2 (16 matches)
-  ['R32-M01','2026-06-28T21:00:00Z','MetLife Stadium, East Rutherford','r32'],
-  ['R32-M02','2026-06-29T01:00:00Z','SoFi Stadium, Inglewood','r32'],
-  ['R32-M03','2026-06-29T17:00:00Z','AT&T Stadium, Arlington','r32'],
-  ['R32-M04','2026-06-29T21:00:00Z','Lumen Field, Seattle','r32'],
-  ['R32-M05','2026-06-30T01:00:00Z','Hard Rock Stadium, Miami','r32'],
-  ['R32-M06','2026-06-30T17:00:00Z','Mercedes-Benz Stadium, Atlanta','r32'],
-  ['R32-M07','2026-06-30T21:00:00Z','NRG Stadium, Houston','r32'],
-  ['R32-M08','2026-07-01T01:00:00Z','Lincoln Financial Field, Philadelphia','r32'],
-  ['R32-M09','2026-07-01T17:00:00Z','Gillette Stadium, Foxborough','r32'],
-  ['R32-M10','2026-07-01T21:00:00Z','GEHA Field at Arrowhead Stadium, KC','r32'],
-  ['R32-M11','2026-07-02T01:00:00Z','BC Place, Vancouver','r32'],
-  ['R32-M12','2026-07-02T17:00:00Z','Estadio Azteca, Mexico City','r32'],
-  ['R32-M13','2026-07-02T21:00:00Z','Estadio Akron, Guadalajara','r32'],
-  ['R32-M14','2026-07-03T01:00:00Z','MetLife Stadium, East Rutherford','r32'],
-  ['R32-M15','2026-07-03T17:00:00Z','SoFi Stadium, Inglewood','r32'],
-  ['R32-M16','2026-07-03T21:00:00Z','AT&T Stadium, Arlington','r32'],
+// Knockout matches — format: [homeCode, awayCode, matchLabel, utcDate, venue, stage]
+// Use 'TBD' for teams not yet determined. Re-running Seed DB will update teams.
+const KNOCKOUT_MATCHES: [string, string, string, string, string, string][] = [
+  // ── Round of 32 — June 28–July 3 (16 matches) ──
+  ['ZAF','CAN', 'R32-M01','2026-06-28T20:00:00Z','SoFi Stadium, Inglewood','r32'],
+  ['GER','PRY', 'R32-M02','2026-06-29T16:00:00Z','Gillette Stadium, Foxborough','r32'],
+  ['NED','MAR', 'R32-M03','2026-06-29T20:00:00Z','Estadio BBVA, Monterrey','r32'],
+  ['BRA','JPN', 'R32-M04','2026-06-30T00:00:00Z','NRG Stadium, Houston','r32'],
+  ['FRA','SWE', 'R32-M05','2026-06-30T16:00:00Z','MetLife Stadium, East Rutherford','r32'],
+  ['CIV','NOR', 'R32-M06','2026-06-30T20:00:00Z','AT&T Stadium, Arlington','r32'],
+  ['MEX','ECU', 'R32-M07','2026-07-01T00:00:00Z','Estadio Azteca, Mexico City','r32'],
+  ['ENG','COD', 'R32-M08','2026-07-01T16:00:00Z','Mercedes-Benz Stadium, Atlanta','r32'],
+  ['USA','BIH', 'R32-M09','2026-07-01T20:00:00Z',"Levi's Stadium, Santa Clara",'r32'],
+  ['BEL','SEN', 'R32-M10','2026-07-02T00:00:00Z','Lumen Field, Seattle','r32'],
+  ['POR','CRO', 'R32-M11','2026-07-02T16:00:00Z','BMO Field, Toronto','r32'],
+  ['ESP','AUT', 'R32-M12','2026-07-02T20:00:00Z','SoFi Stadium, Inglewood','r32'],
+  ['SUI','ALG', 'R32-M13','2026-07-03T00:00:00Z','BC Place, Vancouver','r32'],
+  ['ARG','CPV', 'R32-M14','2026-07-03T16:00:00Z','Hard Rock Stadium, Miami','r32'],
+  ['COL','GHA', 'R32-M15','2026-07-03T20:00:00Z','GEHA Field at Arrowhead Stadium, KC','r32'],
+  ['AUS','EGY', 'R32-M16','2026-07-04T00:00:00Z','AT&T Stadium, Arlington','r32'],
 
-  // Round of 16 — July 5–8 (8 matches)
-  ['R16-M01','2026-07-05T17:00:00Z','Lumen Field, Seattle','r16'],
-  ['R16-M02','2026-07-05T21:00:00Z','Hard Rock Stadium, Miami','r16'],
-  ['R16-M03','2026-07-06T17:00:00Z','Mercedes-Benz Stadium, Atlanta','r16'],
-  ['R16-M04','2026-07-06T21:00:00Z','NRG Stadium, Houston','r16'],
-  ['R16-M05','2026-07-07T17:00:00Z','Lincoln Financial Field, Philadelphia','r16'],
-  ['R16-M06','2026-07-07T21:00:00Z','MetLife Stadium, East Rutherford','r16'],
-  ['R16-M07','2026-07-08T17:00:00Z','AT&T Stadium, Arlington','r16'],
-  ['R16-M08','2026-07-08T21:00:00Z','SoFi Stadium, Inglewood','r16'],
+  // ── Round of 16 — July 5–8 (8 matches, TBD teams) ──
+  ['TBD','TBD','R16-M01','2026-07-05T17:00:00Z','Lumen Field, Seattle','r16'],
+  ['TBD','TBD','R16-M02','2026-07-05T21:00:00Z','Hard Rock Stadium, Miami','r16'],
+  ['TBD','TBD','R16-M03','2026-07-06T17:00:00Z','Mercedes-Benz Stadium, Atlanta','r16'],
+  ['TBD','TBD','R16-M04','2026-07-06T21:00:00Z','NRG Stadium, Houston','r16'],
+  ['TBD','TBD','R16-M05','2026-07-07T17:00:00Z','Lincoln Financial Field, Philadelphia','r16'],
+  ['TBD','TBD','R16-M06','2026-07-07T21:00:00Z','MetLife Stadium, East Rutherford','r16'],
+  ['TBD','TBD','R16-M07','2026-07-08T17:00:00Z','AT&T Stadium, Arlington','r16'],
+  ['TBD','TBD','R16-M08','2026-07-08T21:00:00Z','SoFi Stadium, Inglewood','r16'],
 
-  // Quarter-finals — July 10–11 (4 matches)
-  ['QF-M01','2026-07-10T17:00:00Z','MetLife Stadium, East Rutherford','qf'],
-  ['QF-M02','2026-07-10T21:00:00Z','Hard Rock Stadium, Miami','qf'],
-  ['QF-M03','2026-07-11T17:00:00Z','AT&T Stadium, Arlington','qf'],
-  ['QF-M04','2026-07-11T21:00:00Z','SoFi Stadium, Inglewood','qf'],
+  // ── Quarter-finals — July 10–11 (4 matches, TBD) ──
+  ['TBD','TBD','QF-M01','2026-07-10T17:00:00Z','MetLife Stadium, East Rutherford','qf'],
+  ['TBD','TBD','QF-M02','2026-07-10T21:00:00Z','Hard Rock Stadium, Miami','qf'],
+  ['TBD','TBD','QF-M03','2026-07-11T17:00:00Z','AT&T Stadium, Arlington','qf'],
+  ['TBD','TBD','QF-M04','2026-07-11T21:00:00Z','SoFi Stadium, Inglewood','qf'],
 
-  // Semi-finals — July 14–15 (2 matches)
-  ['SF-M01','2026-07-14T21:00:00Z','MetLife Stadium, East Rutherford','sf'],
-  ['SF-M02','2026-07-15T21:00:00Z','AT&T Stadium, Arlington','sf'],
+  // ── Semi-finals — July 14–15 (TBD) ──
+  ['TBD','TBD','SF-M01','2026-07-14T21:00:00Z','MetLife Stadium, East Rutherford','sf'],
+  ['TBD','TBD','SF-M02','2026-07-15T21:00:00Z','AT&T Stadium, Arlington','sf'],
 
-  // Third-place play-off — July 18
-  ['3RD','2026-07-18T21:00:00Z','Hard Rock Stadium, Miami','3rd'],
+  // ── Third-place play-off — July 18 ──
+  ['TBD','TBD','3RD','2026-07-18T21:00:00Z','Hard Rock Stadium, Miami','3rd'],
 
-  // Final — July 19
-  ['FINAL','2026-07-19T21:00:00Z','MetLife Stadium, East Rutherford','final'],
+  // ── Final — July 19 ──
+  ['TBD','TBD','FINAL','2026-07-19T21:00:00Z','MetLife Stadium, East Rutherford','final'],
 ]
 
 function matchStatus(utcDate: string) {
@@ -327,26 +327,38 @@ export async function POST() {
     })
   )
 
-  // 3. Upsert knockout match stubs (keyed by matchDate — all use TBD vs TBD)
+  // 3. Upsert knockout matches (keyed by matchDate)
+  //    Teams are real codes where known, 'TBD' otherwise.
+  //    Re-running Seed DB will update teams for previously-TBD matches.
   const tdId = teamMap['TBD']
   if (tdId) {
-    for (const [label, utcDate, venue, stage] of KNOCKOUT_MATCHES) {
+    for (const [homeCode, awayCode, label, utcDate, venue, stage] of KNOCKOUT_MATCHES) {
       const matchDate  = new Date(utcDate)
       const status     = matchStatus(utcDate)
       const locked     = new Date() >= new Date(matchDate.getTime() - 15 * 60 * 1000)
-      const existing = await prisma.match.findFirst({ where: { matchDate } })
+      const homeId     = teamMap[homeCode] ?? tdId
+      const awayId     = teamMap[awayCode] ?? tdId
+      const existing   = await prisma.match.findFirst({ where: { matchDate } })
       if (existing) {
-        // Only update metadata — never wipe teams/scores that admin has already filled in
-        await prisma.$executeRawUnsafe(
-          `UPDATE "Match" SET "group"=$1, stage=$2, venue=$3 WHERE id=$4`,
-          label, stage, venue, existing.id
-        )
+        // Update teams + metadata (safe — only overwrites if admin hasn't entered scores yet, or always updates label/venue)
+        if (existing.homeScore === null && existing.awayScore === null) {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "Match" SET "homeTeamId"=$1, "awayTeamId"=$2, "group"=$3, stage=$4, venue=$5, status=$6, locked=$7 WHERE id=$8`,
+            homeId, awayId, label, stage, venue, status, locked, existing.id
+          )
+        } else {
+          // Scores already entered — only update teams/label, not status/locked
+          await prisma.$executeRawUnsafe(
+            `UPDATE "Match" SET "homeTeamId"=$1, "awayTeamId"=$2, "group"=$3, stage=$4, venue=$5 WHERE id=$6`,
+            homeId, awayId, label, stage, venue, existing.id
+          )
+        }
         updated++
       } else {
         await prisma.$executeRawUnsafe(
           `INSERT INTO "Match" ("homeTeamId","awayTeamId","group",stage,"matchDate",venue,status,locked,"homeScore","awayScore",scorers)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NULL,NULL,'{}')`,
-          tdId, tdId, label, stage, matchDate, venue, status, locked
+          homeId, awayId, label, stage, matchDate, venue, status, locked
         )
         created++
       }

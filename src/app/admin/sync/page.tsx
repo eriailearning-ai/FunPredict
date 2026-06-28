@@ -199,6 +199,7 @@ export default function AdminSyncPage() {
                 <p>Matches checked: {result.total ?? 0}</p>
                 <p>Match results updated: {result.updated ?? 0}</p>
                 <p>Predictions scored: {result.scored ?? 0}</p>
+                {(result.teamsUpdated ?? 0) > 0 && <p>🏅 Knockout teams assigned: <strong>{result.teamsUpdated}</strong></p>}
               </div>
             )}
           </div>

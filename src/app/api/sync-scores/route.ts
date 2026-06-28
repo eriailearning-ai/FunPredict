@@ -135,6 +135,45 @@ async function syncMatchResults() {
     }
   }
 
+  // Sync knockout team assignments — for API matches whose DB slot still has TBD teams,
+  // look up by matchDate and update homeTeamId/awayTeamId.
+  let teamsUpdated = 0
+  try {
+    const tbdTeam: any = await prisma.team.findFirst({ where: { code: 'TBD' } })
+    if (tbdTeam) {
+      for (const lm of liveMatches) {
+        // Only process TIMED / SCHEDULED / IN_PLAY / FINISHED knockout matches with real teams
+        if (!lm.homeTeam?.tla || !lm.awayTeam?.tla) continue
+        if (lm.homeTeam.tla === 'TBD' || lm.awayTeam.tla === 'TBD') continue
+
+        // Check if a TBD match exists at this exact UTC kickoff time
+        const kickoff = new Date(lm.utcDate)
+        const tbdMatch: any = await prisma.match.findFirst({
+          where: {
+            matchDate: kickoff,
+            homeTeamId: tbdTeam.id,
+          },
+        })
+        if (!tbdMatch) continue
+
+        // Resolve team IDs from our DB
+        const [homeTeam, awayTeam] = await Promise.all([
+          prisma.team.findFirst({ where: { code: lm.homeTeam.tla } }),
+          prisma.team.findFirst({ where: { code: lm.awayTeam.tla } }),
+        ])
+        if (!homeTeam || !awayTeam) continue
+
+        await prisma.$executeRawUnsafe(
+          `UPDATE "Match" SET "homeTeamId" = $1, "awayTeamId" = $2 WHERE id = $3`,
+          homeTeam.id, awayTeam.id, tbdMatch.id
+        )
+        teamsUpdated++
+      }
+    }
+  } catch (knockoutErr) {
+    console.error('[sync-scores knockout teams]', knockoutErr)
+  }
+
   // Backfill scorers for finished matches that still have an empty scorers array.
   // The competitions endpoint doesn't return goals — fetch individual match endpoints instead.
   // Limit to 5 per sync to stay within free-tier rate limits (10 req/min).
@@ -223,7 +262,7 @@ async function syncMatchResults() {
     update: { value: new Date().toISOString() },
   }).catch(() => {})
 
-  return { ok: true, updated, scored, total: liveMatches.length }
+  return { ok: true, updated, scored, teamsUpdated, total: liveMatches.length }
 }
 
 export async function GET(req: NextRequest) {

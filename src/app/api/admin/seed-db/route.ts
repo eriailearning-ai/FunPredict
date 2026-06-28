@@ -327,9 +327,26 @@ export async function POST() {
     })
   )
 
-  // 3. Upsert knockout matches (keyed by matchDate)
-  //    Teams are real codes where known, 'TBD' otherwise.
-  //    Re-running Seed DB will update teams for previously-TBD matches.
+  // 3a. Dedup — if a previous seed run created duplicate knockout rows with the same label,
+  //     keep the lowest-id row and delete the rest (including their predictions).
+  const knockoutLabels = KNOCKOUT_MATCHES.map(([,,label]) => label)
+  for (const label of knockoutLabels) {
+    const rows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT id FROM "Match" WHERE "group" = $1 ORDER BY id ASC`, label
+    )
+    if (rows.length > 1) {
+      const extraIds = rows.slice(1).map((r: any) => Number(r.id))
+      await prisma.$executeRawUnsafe(
+        `DELETE FROM "Prediction" WHERE "matchId" = ANY($1::int[])`, extraIds
+      )
+      await prisma.$executeRawUnsafe(
+        `DELETE FROM "Match" WHERE id = ANY($1::int[])`, extraIds
+      )
+    }
+  }
+
+  // 3b. Upsert knockout matches (keyed by group label — reliable across re-runs)
+  //     Teams are real codes where known, 'TBD' otherwise.
   const tdId = teamMap['TBD']
   if (tdId) {
     for (const [homeCode, awayCode, label, utcDate, venue, stage] of KNOCKOUT_MATCHES) {

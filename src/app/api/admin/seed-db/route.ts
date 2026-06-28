@@ -338,19 +338,19 @@ export async function POST() {
       const locked     = new Date() >= new Date(matchDate.getTime() - 15 * 60 * 1000)
       const homeId     = teamMap[homeCode] ?? tdId
       const awayId     = teamMap[awayCode] ?? tdId
-      const existing   = await prisma.match.findFirst({ where: { matchDate } })
+      // Use match label (stored in `group` field) as unique key — more reliable than matchDate
+      const existing = await prisma.match.findFirst({ where: { group: label } })
       if (existing) {
-        // Update teams + metadata (safe — only overwrites if admin hasn't entered scores yet, or always updates label/venue)
+        // Update teams + metadata; preserve admin-entered scores
         if (existing.homeScore === null && existing.awayScore === null) {
           await prisma.$executeRawUnsafe(
-            `UPDATE "Match" SET "homeTeamId"=$1, "awayTeamId"=$2, "group"=$3, stage=$4, venue=$5, status=$6, locked=$7 WHERE id=$8`,
-            homeId, awayId, label, stage, venue, status, locked, existing.id
+            `UPDATE "Match" SET "homeTeamId"=$1, "awayTeamId"=$2, "group"=$3, stage=$4, "matchDate"=$5, venue=$6, status=$7, locked=$8 WHERE id=$9`,
+            homeId, awayId, label, stage, matchDate, venue, status, locked, existing.id
           )
         } else {
-          // Scores already entered — only update teams/label, not status/locked
           await prisma.$executeRawUnsafe(
-            `UPDATE "Match" SET "homeTeamId"=$1, "awayTeamId"=$2, "group"=$3, stage=$4, venue=$5 WHERE id=$6`,
-            homeId, awayId, label, stage, venue, existing.id
+            `UPDATE "Match" SET "homeTeamId"=$1, "awayTeamId"=$2, "group"=$3, stage=$4, "matchDate"=$5, venue=$6 WHERE id=$7`,
+            homeId, awayId, label, stage, matchDate, venue, existing.id
           )
         }
         updated++

@@ -99,9 +99,17 @@ export default function PredictionsClient({
 
   const [saving,  setSaving]  = useState<number | null>(null)
   const [saved,   setSaved]   = useState<Record<number, boolean>>({})
-  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>(() => ({
-    [new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })]: true,
-  }))
+  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>(() => {
+    const todayK = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })
+    const init: Record<string, boolean> = { [todayK]: true }
+    // Auto-expand all knockout stage dates so players can see and predict them
+    for (const m of matches) {
+      if (m.stage && m.stage !== 'group') {
+        init[fmtDate(m.matchDate)] = true
+      }
+    }
+    return init
+  })
   const [tab, setTab]         = useState(isLoggedIn ? 1 : 0)
   const [rulesOpen, setRulesOpen] = useState(false)
 
